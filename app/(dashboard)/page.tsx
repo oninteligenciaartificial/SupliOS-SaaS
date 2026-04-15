@@ -31,7 +31,7 @@ export default async function Dashboard() {
     }),
   ]);
 
-  const monthlyRevenue = monthlyOrders.reduce((sum, o) => sum + Number(o.total), 0);
+  const monthlyRevenue = monthlyOrders.reduce((sum: number, o) => sum + Number(o.total), 0);
   const lowStockAlerts = allProducts.filter((p) => p.stock <= p.minStock).slice(0, 5);
 
   const kpis = [
