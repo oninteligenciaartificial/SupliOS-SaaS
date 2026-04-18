@@ -1,8 +1,10 @@
 import { createClient } from "@/lib/supabase/server";
 import { prisma } from "@/lib/prisma";
 import { redirect } from "next/navigation";
+import { cookies } from "next/headers";
 import { SidebarNav } from "./SidebarNav";
 import { SidebarUser } from "./SidebarUser";
+import { ImpersonationBanner } from "./ImpersonationBanner";
 
 export default async function DashboardLayout({
   children,
@@ -21,7 +23,12 @@ export default async function DashboardLayout({
 
   if (!profile) redirect("/setup");
 
-  const isSuperAdmin = profile.role === "SUPERADMIN";
+  const cookieStore = await cookies();
+  const impersonateOrgId = cookieStore.get("impersonate_org_id")?.value;
+  const impersonateOrgName = cookieStore.get("impersonate_org_name")?.value;
+
+  const isImpersonating = profile.role === "SUPERADMIN" && !!impersonateOrgId;
+  const isSuperAdmin = profile.role === "SUPERADMIN" && !isImpersonating;
 
   const superAdminLinks = [
     { href: "/superadmin", label: "Panel Principal" },
@@ -38,12 +45,20 @@ export default async function DashboardLayout({
     { href: "/suppliers", label: "Proveedores" },
     { href: "/discounts", label: "Descuentos" },
     { href: "/categories", label: "Categorias" },
-    ...(profile.role === "ADMIN" ? [{ href: "/staff", label: "Equipo" }] : []),
-    { href: "/settings", label: "Configuracion" },
+    ...(!isImpersonating && profile.role === "ADMIN" ? [{ href: "/staff", label: "Equipo" }] : []),
+    ...(isImpersonating ? [] : [{ href: "/settings", label: "Configuracion" }]),
   ];
 
   const navLinks = isSuperAdmin ? superAdminLinks : tenantLinks;
-  const orgName = isSuperAdmin ? "Super Admin" : (profile.organization?.name ?? "");
+
+  let orgDisplayName: string;
+  if (isSuperAdmin) {
+    orgDisplayName = "Super Admin";
+  } else if (isImpersonating) {
+    orgDisplayName = impersonateOrgName ?? "Tienda";
+  } else {
+    orgDisplayName = profile.organization?.name ?? "";
+  }
 
   return (
     <div className="flex min-h-screen">
@@ -52,8 +67,8 @@ export default async function DashboardLayout({
           <div className="text-xl font-display font-bold tracking-widest text-brand-kinetic-orange">
             SupliOS.
           </div>
-          <div className={`text-xs mt-1 truncate ${isSuperAdmin ? "text-brand-kinetic-orange/70 font-medium" : "text-brand-muted"}`}>
-            {orgName}
+          <div className={`text-xs mt-1 truncate ${isSuperAdmin ? "text-brand-kinetic-orange/70 font-medium" : isImpersonating ? "text-yellow-400/70" : "text-brand-muted"}`}>
+            {orgDisplayName}
           </div>
         </div>
 
@@ -67,6 +82,9 @@ export default async function DashboardLayout({
         />
       </aside>
       <main className="flex-1 w-full relative overflow-y-auto">
+        {isImpersonating && impersonateOrgName && (
+          <ImpersonationBanner orgName={impersonateOrgName} />
+        )}
         {children}
       </main>
     </div>

@@ -1,7 +1,8 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
-import { Plus, X, Building2, Pencil, Trash2 } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { Plus, X, Building2, Pencil, Trash2, LogIn } from "lucide-react";
 
 interface Org {
   id: string;
@@ -17,8 +18,10 @@ const EMPTY_CREATE = { orgName: "", adminName: "", adminEmail: "", adminPassword
 const input = "w-full px-4 py-2.5 rounded-xl bg-white/5 border border-white/10 text-white placeholder-brand-muted focus:outline-none focus:border-brand-kinetic-orange transition-colors";
 
 export default function OrganizationsPage() {
+  const router = useRouter();
   const [orgs, setOrgs] = useState<Org[]>([]);
   const [loading, setLoading] = useState(true);
+  const [entering, setEntering] = useState<string | null>(null);
   const [showCreate, setShowCreate] = useState(false);
   const [createForm, setCreateForm] = useState(EMPTY_CREATE);
   const [saving, setSaving] = useState(false);
@@ -89,6 +92,17 @@ export default function OrganizationsPage() {
     setEditSaving(false);
   }
 
+  async function handleEnterOrg(orgId: string) {
+    setEntering(orgId);
+    await fetch("/api/superadmin/impersonate", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ orgId }),
+    });
+    router.push("/");
+    router.refresh();
+  }
+
   async function handleDelete(id: string) {
     await fetch(`/api/superadmin/organizations/${id}`, { method: "DELETE" });
     setDeleteId(null);
@@ -144,6 +158,14 @@ export default function OrganizationsPage() {
                   <td className="p-5 text-brand-muted text-sm">{new Date(org.createdAt).toLocaleDateString("es-MX")}</td>
                   <td className="p-5">
                     <div className="flex items-center gap-2">
+                      <button
+                        onClick={() => handleEnterOrg(org.id)}
+                        disabled={entering === org.id}
+                        title="Ver panel de esta tienda"
+                        className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-brand-kinetic-orange/10 text-brand-kinetic-orange hover:bg-brand-kinetic-orange/20 transition-colors text-xs font-medium disabled:opacity-50"
+                      >
+                        <LogIn size={13} /> {entering === org.id ? "Entrando..." : "Entrar"}
+                      </button>
                       <button onClick={() => openEdit(org)} className="p-2 rounded-lg hover:bg-white/10 text-brand-muted hover:text-white transition-colors">
                         <Pencil size={15} />
                       </button>
