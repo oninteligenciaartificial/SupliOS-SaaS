@@ -35,6 +35,9 @@ export default async function DashboardLayout({
     { href: "/orders", label: "Pedidos" },
     { href: "/customers", label: "Clientes" },
     { href: "/reports", label: "Reportes" },
+    { href: "/suppliers", label: "Proveedores" },
+    { href: "/discounts", label: "Descuentos" },
+    { href: "/categories", label: "Categorias" },
     ...(profile.role === "ADMIN" ? [{ href: "/staff", label: "Equipo" }] : []),
     { href: "/settings", label: "Configuracion" },
   ];
