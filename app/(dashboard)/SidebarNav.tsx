@@ -4,7 +4,7 @@ import { usePathname } from "next/navigation";
 
 interface NavLink { href: string; label: string }
 
-export function SidebarNav({ links }: { links: NavLink[] }) {
+export function SidebarNav({ links, onNavigate }: { links: NavLink[]; onNavigate?: () => void }) {
   const pathname = usePathname();
 
   function isActive(href: string) {
@@ -19,6 +19,7 @@ export function SidebarNav({ links }: { links: NavLink[] }) {
         <a
           key={link.href}
           href={link.href}
+          onClick={onNavigate}
           className={`px-4 py-3 rounded-xl text-sm font-medium transition-colors ${
             isActive(link.href)
               ? "bg-brand-kinetic-orange/15 text-brand-kinetic-orange border border-brand-kinetic-orange/30"

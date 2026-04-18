@@ -2,8 +2,7 @@ import { createClient } from "@/lib/supabase/server";
 import { prisma } from "@/lib/prisma";
 import { redirect } from "next/navigation";
 import { cookies } from "next/headers";
-import { SidebarNav } from "./SidebarNav";
-import { SidebarUser } from "./SidebarUser";
+import { SidebarWrapper } from "./SidebarWrapper";
 import { ImpersonationBanner } from "./ImpersonationBanner";
 
 export default async function DashboardLayout({
@@ -63,30 +62,23 @@ export default async function DashboardLayout({
 
   return (
     <div className="flex min-h-screen">
-      <aside className="w-64 border-r border-white/5 bg-brand-surface-lowest/50 p-6 flex flex-col gap-8">
-        <div>
-          <div className="text-xl font-display font-bold tracking-widest text-brand-kinetic-orange">
-            SupliOS.
-          </div>
-          <div className={`text-xs mt-1 truncate ${isSuperAdmin ? "text-brand-kinetic-orange/70 font-medium" : isImpersonating ? "text-yellow-400/70" : "text-brand-muted"}`}>
-            {orgDisplayName}
-          </div>
-        </div>
-
-        <SidebarNav links={navLinks} />
-
-        <SidebarUser
-          name={profile.name}
-          email={user.email ?? ""}
-          role={profile.role}
-          isSuperAdmin={isSuperAdmin}
-        />
-      </aside>
-      <main className="flex-1 w-full relative overflow-y-auto">
+      <SidebarWrapper
+        links={navLinks}
+        orgName={orgDisplayName}
+        isSuperAdmin={isSuperAdmin}
+        isImpersonating={isImpersonating}
+        name={profile.name}
+        email={user.email ?? ""}
+        role={profile.role}
+      />
+      <main className="flex-1 w-full relative overflow-y-auto lg:overflow-y-auto">
         {isImpersonating && impersonateOrgName && (
           <ImpersonationBanner orgName={impersonateOrgName} />
         )}
-        {children}
+        {/* Padding top on mobile to avoid hamburger overlap */}
+        <div className="pt-16 lg:pt-0 h-full">
+          {children}
+        </div>
       </main>
     </div>
   );
