@@ -45,6 +45,7 @@ export default function OrdersPage() {
   const [actionsId, setActionsId] = useState<string | null>(null);
   const [detailOrder, setDetailOrder] = useState<Order | null>(null);
   const [saving, setSaving] = useState(false);
+  const [loadingModal, setLoadingModal] = useState(false);
   const [error, setError] = useState("");
 
   const [form, setForm] = useState({
@@ -61,17 +62,16 @@ export default function OrdersPage() {
   }, [filterStatus]);
 
   useEffect(() => { fetchOrders(); }, [fetchOrders]);
-  useEffect(() => {
-    Promise.all([fetch("/api/products"), fetch("/api/customers")]).then(async ([p, c]) => {
-      if (p.ok) setProducts(await p.json());
-      if (c.ok) setCustomers(await c.json());
-    });
-  }, []);
 
-  function openCreate() {
+  async function openCreate() {
     setForm({ customerName: "", customerId: "", notes: "", items: [{ productId: "", quantity: 1, unitPrice: 0 }] });
     setError("");
     setShowModal(true);
+    setLoadingModal(true);
+    const [p, c] = await Promise.all([fetch("/api/products"), fetch("/api/customers")]);
+    if (p.ok) setProducts(await p.json());
+    if (c.ok) setCustomers(await c.json());
+    setLoadingModal(false);
   }
 
   function addItem() { setForm((f) => ({ ...f, items: [...f.items, { productId: "", quantity: 1, unitPrice: 0 }] })); }
@@ -351,8 +351,8 @@ export default function OrdersPage() {
                 </div>
                 {form.items.map((item, i) => (
                   <div key={i} className="flex gap-2 items-start">
-                    <select value={item.productId} onChange={(e) => setItem(i, "productId", e.target.value)} className={`${inp} flex-1`}>
-                      <option value="">-- Producto --</option>
+                    <select value={item.productId} onChange={(e) => setItem(i, "productId", e.target.value)} className={`${inp} flex-1`} disabled={loadingModal}>
+                      <option value="">{loadingModal ? "Cargando..." : products.length === 0 ? "Sin productos" : "-- Producto --"}</option>
                       {products.map((p) => <option key={p.id} value={p.id}>{p.name} (${Number(p.price).toLocaleString("es-MX")})</option>)}
                     </select>
                     <input type="number" min="1" value={item.quantity} onChange={(e) => setItem(i, "quantity", Number(e.target.value))} className={`${inp} w-20`} placeholder="Cant." />
