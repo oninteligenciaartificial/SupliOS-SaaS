@@ -326,13 +326,13 @@ export default function OrdersPage() {
 
       {/* Create modal */}
       {showModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4 overflow-y-auto">
-          <div className="glass-panel w-full max-w-lg rounded-3xl p-8 space-y-6 my-8">
+        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/70 p-0 sm:p-4">
+          <div className="glass-panel w-full max-w-lg rounded-t-3xl sm:rounded-3xl p-5 sm:p-8 space-y-5 sm:space-y-6 max-h-[95vh] sm:max-h-[90vh] flex flex-col">
             <div className="flex justify-between items-center">
               <h2 className="text-xl font-display font-bold text-white">Nuevo Pedido</h2>
               <button onClick={() => setShowModal(false)} className="text-brand-muted hover:text-white transition-colors"><X size={20} /></button>
             </div>
-            <form onSubmit={handleCreate} className="space-y-5">
+            <form onSubmit={handleCreate} className="space-y-4 overflow-y-auto flex-1">
               <div className="space-y-1.5">
                 <label className="text-sm text-brand-muted">Nombre del cliente *</label>
                 <input required value={form.customerName} onChange={(e) => setForm({ ...form, customerName: e.target.value })} className={inp} placeholder="Nombre o razon social" />
@@ -347,19 +347,29 @@ export default function OrdersPage() {
               <div className="space-y-3">
                 <div className="flex justify-between items-center">
                   <label className="text-sm text-brand-muted">Productos *</label>
-                  <button type="button" onClick={addItem} className="text-brand-kinetic-orange text-sm font-bold hover:underline">+ Agregar linea</button>
+                  <button type="button" onClick={addItem} className="text-brand-kinetic-orange text-sm font-bold hover:underline">+ Agregar</button>
                 </div>
                 {form.items.map((item, i) => (
-                  <div key={i} className="flex gap-2 items-start">
-                    <select value={item.productId} onChange={(e) => setItem(i, "productId", e.target.value)} className={`${inp} flex-1`} disabled={loadingModal}>
-                      <option value="">{loadingModal ? "Cargando..." : products.length === 0 ? "Sin productos" : "-- Producto --"}</option>
-                      {products.map((p) => <option key={p.id} value={p.id}>{p.name} (${Number(p.price).toLocaleString("es-MX")})</option>)}
-                    </select>
-                    <input type="number" min="1" value={item.quantity} onChange={(e) => setItem(i, "quantity", Number(e.target.value))} className={`${inp} w-20`} placeholder="Cant." />
-                    <input type="number" min="0" step="0.01" value={item.unitPrice} onChange={(e) => setItem(i, "unitPrice", Number(e.target.value))} className={`${inp} w-28`} placeholder="Precio" />
-                    {form.items.length > 1 && (
-                      <button type="button" onClick={() => removeItem(i)} className="p-2.5 rounded-xl bg-white/5 border border-white/10 text-red-400 hover:bg-red-500/10 transition-colors"><X size={16} /></button>
-                    )}
+                  <div key={i} className="space-y-2 p-3 rounded-xl bg-white/[0.03] border border-white/5">
+                    <div className="flex gap-2 items-center">
+                      <select value={item.productId} onChange={(e) => setItem(i, "productId", e.target.value)} className={`${inp} flex-1 text-sm`} disabled={loadingModal}>
+                        <option value="">{loadingModal ? "Cargando..." : products.length === 0 ? "Sin productos" : "-- Producto --"}</option>
+                        {products.map((p) => <option key={p.id} value={p.id}>{p.name} (${Number(p.price).toLocaleString("es-MX")})</option>)}
+                      </select>
+                      {form.items.length > 1 && (
+                        <button type="button" onClick={() => removeItem(i)} className="p-2 rounded-xl bg-white/5 text-red-400 hover:bg-red-500/10 transition-colors flex-shrink-0"><X size={15} /></button>
+                      )}
+                    </div>
+                    <div className="grid grid-cols-2 gap-2">
+                      <div>
+                        <label className="text-xs text-brand-muted mb-1 block">Cantidad</label>
+                        <input type="number" min="1" value={item.quantity} onChange={(e) => setItem(i, "quantity", Number(e.target.value))} className={`${inp} text-sm`} placeholder="1" />
+                      </div>
+                      <div>
+                        <label className="text-xs text-brand-muted mb-1 block">Precio unit.</label>
+                        <input type="number" min="0" step="0.01" value={item.unitPrice} onChange={(e) => setItem(i, "unitPrice", Number(e.target.value))} className={`${inp} text-sm`} placeholder="0.00" />
+                      </div>
+                    </div>
                   </div>
                 ))}
               </div>

@@ -38,40 +38,40 @@ export default async function Dashboard() {
   ];
 
   return (
-    <div className="p-8 max-w-7xl mx-auto space-y-8">
-      <header className="flex justify-between items-center animate-pop">
+    <div className="p-4 sm:p-6 lg:p-8 max-w-7xl mx-auto space-y-6 sm:space-y-8">
+      <header className="flex flex-wrap justify-between items-start gap-3 animate-pop">
         <div>
-          <h1 className="text-4xl font-display font-bold text-white tracking-tight">Dashboard</h1>
-          <p className="text-brand-muted mt-1">Vision general de tu tienda</p>
+          <h1 className="text-2xl sm:text-4xl font-display font-bold text-white tracking-tight">Dashboard</h1>
+          <p className="text-brand-muted mt-1 text-sm">Vision general de tu tienda</p>
         </div>
-        <div className="flex gap-4">
-          <button className="glass-panel px-6 py-3 rounded-full flex items-center gap-2 hover:bg-brand-surface-highest/80 transition-colors">
-            <RefreshCcw size={18} className="text-brand-kinetic-orange" />
-            <span>Sincronizar</span>
+        <div className="flex gap-2 sm:gap-4 flex-shrink-0">
+          <button className="glass-panel px-3 sm:px-6 py-2.5 sm:py-3 rounded-full flex items-center gap-2 hover:bg-brand-surface-highest/80 transition-colors text-sm">
+            <RefreshCcw size={16} className="text-brand-kinetic-orange" />
+            <span className="hidden sm:inline">Sincronizar</span>
           </button>
-          <a href="/orders/new" className="bg-gradient-to-br from-brand-kinetic-orange to-brand-kinetic-orange-light text-black px-6 py-3 rounded-full font-bold flex items-center gap-2 shadow-[0_0_20px_rgba(255,107,0,0.3)] hover:shadow-[0_0_30px_rgba(255,107,0,0.5)] transition-all">
-            <Plus size={18} />
-            <span>Nuevo Pedido</span>
+          <a href="/orders" className="bg-gradient-to-br from-brand-kinetic-orange to-brand-kinetic-orange-light text-black px-4 sm:px-6 py-2.5 sm:py-3 rounded-full font-bold flex items-center gap-2 shadow-[0_0_20px_rgba(255,107,0,0.3)] hover:shadow-[0_0_30px_rgba(255,107,0,0.5)] transition-all text-sm sm:text-base">
+            <Plus size={16} />
+            <span>Pedido</span>
           </a>
         </div>
       </header>
 
-      <section className="kpi-grid grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+      <section className="kpi-grid grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-6">
         {kpis.map((kpi) => (
-          <div key={kpi.title} className="glass-panel p-6 rounded-2xl animate-pop hover:-translate-y-2 transition-transform duration-300">
-            <div className="flex justify-between items-start mb-4">
-              <h3 className="text-brand-muted font-medium">{kpi.title}</h3>
-              <div className={`p-2 rounded-lg bg-white/5 ${kpi.color}`}>
-                <kpi.icon size={20} />
+          <div key={kpi.title} className="glass-panel p-4 sm:p-6 rounded-2xl animate-pop hover:-translate-y-1 sm:hover:-translate-y-2 transition-transform duration-300">
+            <div className="flex justify-between items-start mb-3 sm:mb-4">
+              <h3 className="text-brand-muted font-medium text-xs sm:text-sm">{kpi.title}</h3>
+              <div className={`p-1.5 sm:p-2 rounded-lg bg-white/5 ${kpi.color}`}>
+                <kpi.icon size={16} className="sm:w-5 sm:h-5" />
               </div>
             </div>
-            <div className="text-4xl font-display font-bold text-white mb-1">{kpi.value}</div>
-            <div className="text-sm text-brand-muted/70">{kpi.label}</div>
+            <div className="text-2xl sm:text-4xl font-display font-bold text-white mb-1">{kpi.value}</div>
+            <div className="text-xs sm:text-sm text-brand-muted/70">{kpi.label}</div>
           </div>
         ))}
       </section>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 sm:gap-8">
         <section className="lg:col-span-2 space-y-6">
           <h2 className="text-2xl font-display font-bold text-white animate-pop">
             Alertas de Stock <span className="text-brand-kinetic-orange ml-2">•</span>

@@ -322,8 +322,8 @@ export default function Inventory() {
 
       {/* Modal crear / editar */}
       {showModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4">
-          <div className="glass-panel w-full max-w-lg rounded-3xl p-8 space-y-6">
+        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/70 p-0 sm:p-4">
+          <div className="glass-panel w-full max-w-lg rounded-t-3xl sm:rounded-3xl p-5 sm:p-8 space-y-5 sm:space-y-6 max-h-[95vh] sm:max-h-[90vh] flex flex-col">
             <div className="flex justify-between items-center">
               <h2 className="text-xl font-display font-bold text-white">
                 {editing ? "Editar Producto" : "Nuevo Producto"}
@@ -333,22 +333,22 @@ export default function Inventory() {
               </button>
             </div>
 
-            <form onSubmit={handleSave} className="space-y-4 max-h-[70vh] overflow-y-auto pr-1">
+            <form onSubmit={handleSave} className="space-y-4 overflow-y-auto flex-1 pr-1">
               <Field label="Nombre *">
                 <input required value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} className={input} placeholder="Whey Protein 100%" />
               </Field>
 
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-2 gap-3">
                 <Field label="SKU">
                   <input value={form.sku} onChange={(e) => setForm({ ...form, sku: e.target.value })} className={input} placeholder="WP-100" />
                 </Field>
-                <Field label="Codigo de barras">
-                  <input value={form.barcode} onChange={(e) => setForm({ ...form, barcode: e.target.value })} className={input} placeholder="7501234567890" />
+                <Field label="Cod. barras">
+                  <input value={form.barcode} onChange={(e) => setForm({ ...form, barcode: e.target.value })} className={input} placeholder="7501234..." />
                 </Field>
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
-                <Field label="Unidad de medida">
+              <div className="grid grid-cols-2 gap-3">
+                <Field label="Unidad">
                   <select value={form.unit} onChange={(e) => setForm({ ...form, unit: e.target.value })} className={input}>
                     <option value="">Sin especificar</option>
                     <option value="pieza">Pieza</option>
@@ -370,7 +370,7 @@ export default function Inventory() {
                 </Field>
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-2 gap-3">
                 <Field label="Precio venta *">
                   <input required type="number" min="0" step="0.01" value={form.price} onChange={(e) => setForm({ ...form, price: e.target.value })} className={input} placeholder="55.00" />
                 </Field>
@@ -379,7 +379,7 @@ export default function Inventory() {
                 </Field>
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-2 gap-3">
                 <Field label="Stock actual">
                   <input required type="number" min="0" value={form.stock} onChange={(e) => setForm({ ...form, stock: e.target.value })} className={input} />
                 </Field>
