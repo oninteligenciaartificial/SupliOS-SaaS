@@ -1,17 +1,11 @@
-import { createClient } from "@/lib/supabase/server";
 import { prisma } from "@/lib/prisma";
 import { redirect } from "next/navigation";
+import { getTenantProfile } from "@/lib/auth";
 import { Package, ShoppingCart, AlertTriangle, DollarSign, MessageSquare, Plus, RefreshCcw, PackageSearch } from "lucide-react";
 
 export default async function Dashboard() {
-  const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) redirect("/login");
-
-  const profile = await prisma.profile.findUnique({ where: { userId: user.id } });
-  if (!profile) redirect("/setup");
-  if (profile.role === "SUPERADMIN") redirect("/superadmin");
-  if (!profile.organizationId) redirect("/setup");
+  const profile = await getTenantProfile();
+  if (!profile) redirect("/login");
 
   const orgId = profile.organizationId as string;
   const weekAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
