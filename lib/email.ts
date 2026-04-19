@@ -1,6 +1,10 @@
 import { Resend } from "resend";
 
-const resend = new Resend(process.env.RESEND_API_KEY);
+function getResend() {
+  if (!process.env.RESEND_API_KEY) return null;
+  return new Resend(process.env.RESEND_API_KEY);
+}
+
 const FROM = process.env.EMAIL_FROM ?? "GestiOS <noreply@gestios.app>";
 
 interface OrderItem {
@@ -104,7 +108,7 @@ export async function sendOrderConfirmation(args: SendOrderConfirmationArgs) {
     <p style="margin:20px 0 0;font-size:13px;color:#666;">Folio de pedido: <code style="color:#ff6b00;">#${args.orderId.slice(-8).toUpperCase()}</code></p>
   `;
 
-  await resend.emails.send({
+  await getResend()?.emails.send({
     from: FROM,
     to: args.to,
     subject: `Pedido recibido — ${args.orgName}`,
@@ -128,7 +132,7 @@ export async function sendOrderStatusUpdate(args: SendOrderStatusArgs) {
     <p style="margin:0;font-size:13px;color:#666;">Folio: <code style="color:#ff6b00;">#${args.orderId.slice(-8).toUpperCase()}</code></p>
   `;
 
-  await resend.emails.send({
+  await getResend()?.emails.send({
     from: FROM,
     to: args.to,
     subject: `Tu pedido esta ${statusLabel} — ${args.orgName}`,
@@ -161,7 +165,7 @@ export async function sendLowStockAlert(args: SendLowStockAlertArgs) {
     <p style="margin:24px 0 0;font-size:13px;color:#666;">Entra a GestiOS para reabastecer tu inventario.</p>
   `;
 
-  await resend.emails.send({
+  await getResend()?.emails.send({
     from: FROM,
     to: args.to,
     subject: `⚠️ ${args.products.length} producto(s) con stock bajo — ${args.orgName}`,
