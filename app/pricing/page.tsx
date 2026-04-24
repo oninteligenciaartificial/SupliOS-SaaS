@@ -94,13 +94,21 @@ const ADDONS = [
 export default function PricingPage() {
   return (
     <div className="min-h-screen bg-[#0a0a0a] text-white">
-      {/* Header */}
-      <header className="border-b border-white/5 px-6 py-4 flex items-center justify-between">
-        <div className="text-xl font-display font-bold tracking-widest text-brand-kinetic-orange">GestiOS.</div>
-        <Link href="/login" className="px-5 py-2 rounded-full border border-white/10 text-sm text-white hover:border-brand-kinetic-orange hover:text-brand-kinetic-orange transition-colors">
-          Iniciar sesión
-        </Link>
-      </header>
+      {/* Nav */}
+      <nav className="border-b border-white/5 px-6 py-4 flex items-center justify-between">
+        <Link href="/" className="text-xl font-display font-bold tracking-widest text-brand-kinetic-orange">GestiOS.</Link>
+        <div className="flex items-center gap-3">
+          <Link href="/pricing" className="text-sm text-brand-kinetic-orange font-medium hidden sm:block">
+            Precios
+          </Link>
+          <Link href="/login" className="px-4 py-2 rounded-full border border-white/10 text-sm text-white hover:border-brand-kinetic-orange hover:text-brand-kinetic-orange transition-colors">
+            Entrar
+          </Link>
+          <Link href="/signup" className="px-4 py-2 rounded-full bg-gradient-to-br from-brand-kinetic-orange to-brand-kinetic-orange-light text-black text-sm font-bold">
+            Prueba gratis
+          </Link>
+        </div>
+      </nav>
 
       <main className="max-w-6xl mx-auto px-4 py-16 space-y-20">
         {/* Hero */}
