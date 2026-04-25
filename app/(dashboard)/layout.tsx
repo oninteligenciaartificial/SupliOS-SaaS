@@ -104,7 +104,7 @@ export default async function DashboardLayout({
     ...(showAddons && (profile.role === "ADMIN" || isImpersonating) ? [{ href: "/addons", label: "Add-ons" }] : []),
     ...(!isImpersonating && (profile.role === "ADMIN" || profile.role === "MANAGER") ? [{ href: "/staff", label: "Equipo" }] : []),
     ...(isImpersonating ? [] : [{ href: "/settings", label: "Configuracion" }]),
-    ...(profile.role === "ADMIN" ? [{ href: "/billing", label: "Facturacion" }] : []),
+    ...((profile.role === "ADMIN" || isImpersonating) ? [{ href: "/billing", label: "Facturacion" }] : []),
   ];
 
   const navLinks = isSuperAdmin ? superAdminLinks : tenantLinks;
