@@ -5,7 +5,7 @@ const PLANS = [
   {
     name: "Básico",
     price: "$39",
-    priceBOB: "Bs. 351",
+    priceBOB: "Bs. 350",
     period: "/mes",
     color: "text-white",
     border: "border-white/10",
@@ -29,7 +29,7 @@ const PLANS = [
   {
     name: "Crecer",
     price: "$59",
-    priceBOB: "Bs. 531",
+    priceBOB: "Bs. 530",
     period: "/mes",
     color: "text-blue-300",
     border: "border-blue-400/30",
@@ -51,7 +51,7 @@ const PLANS = [
   {
     name: "Pro",
     price: "$89",
-    priceBOB: "Bs. 801",
+    priceBOB: "Bs. 800",
     period: "/mes",
     color: "text-blue-400",
     border: "border-blue-500/30",
@@ -70,7 +70,7 @@ const PLANS = [
   {
     name: "Empresarial",
     price: "$139",
-    priceBOB: "Bs. 1.251",
+    priceBOB: "Bs. 1.250",
     period: "/mes",
     color: "text-brand-kinetic-orange",
     border: "border-brand-kinetic-orange/40",

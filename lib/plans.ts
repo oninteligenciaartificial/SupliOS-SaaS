@@ -1,10 +1,10 @@
 export type PlanType = "BASICO" | "CRECER" | "PRO" | "EMPRESARIAL";
 
 export const PLAN_PRICES_BOB: Record<PlanType, number> = {
-  BASICO: 351,
-  CRECER: 531,
-  PRO: 801,
-  EMPRESARIAL: 1251,
+  BASICO: 350,
+  CRECER: 530,
+  PRO: 800,
+  EMPRESARIAL: 1250,
 };
 export type AddonType = "WHATSAPP" | "FACTURACION" | "MERCADOPAGO" | "ECOMMERCE" | "CONTABILIDAD";
 
