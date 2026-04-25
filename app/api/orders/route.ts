@@ -30,9 +30,13 @@ export async function GET(request: Request) {
   const limit = Math.min(200, Math.max(1, parseInt(searchParams.get("limit") ?? "50", 10)));
   const skip = (page - 1) * limit;
 
+  const VALID_STATUSES = ["PENDIENTE", "CONFIRMADO", "ENVIADO", "ENTREGADO", "CANCELADO"] as const;
+  type ValidStatus = typeof VALID_STATUSES[number];
+  const validStatus = VALID_STATUSES.includes(status as ValidStatus) ? (status as ValidStatus) : undefined;
+
   const where = {
     organizationId: profile.organizationId,
-    ...(status ? { status: status as never } : {}),
+    ...(validStatus ? { status: validStatus } : {}),
   };
 
   const [orders, total] = await Promise.all([

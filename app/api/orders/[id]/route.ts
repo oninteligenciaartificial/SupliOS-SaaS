@@ -93,8 +93,8 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
 
     // Loyalty points on delivery — always accumulate, email only if customer has one
     if (result.data.status === "ENTREGADO" && order.customerId) {
-      const POINTS_PER_UNIT = 1;
-      const pointsEarned = Math.floor(Number(order.total) * POINTS_PER_UNIT);
+      const POINTS_PER_BOB = 0.1; // 1 punto por cada Bs. 10
+      const pointsEarned = Math.floor(Number(order.total) * POINTS_PER_BOB);
       const updatedCustomer = await prisma.customer.update({
         where: { id: order.customerId },
         data: { loyaltyPoints: { increment: pointsEarned } },
