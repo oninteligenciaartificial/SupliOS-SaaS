@@ -50,7 +50,7 @@ export default function POSPage() {
   const fetchData = useCallback(async () => {
     setLoading(true);
     const [pRes, dRes] = await Promise.all([fetch("/api/products"), fetch("/api/discounts")]);
-    if (pRes.ok) setProducts(await pRes.json());
+    if (pRes.ok) { const d = await pRes.json(); setProducts(d.data ?? d); }
     if (dRes.ok) setDiscounts(await dRes.json());
     setLoading(false);
   }, []);

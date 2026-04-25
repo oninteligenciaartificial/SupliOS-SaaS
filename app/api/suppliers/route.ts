@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { getTenantProfile } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { canUseFeature, planGateError } from "@/lib/plans";
+import { hasPermission } from "@/lib/permissions";
 import { z } from "zod";
 
 const schema = z.object({
@@ -28,7 +29,7 @@ export async function GET() {
 export async function POST(request: Request) {
   const profile = await getTenantProfile();
   if (!profile) return NextResponse.json({ error: "No autorizado" }, { status: 401 });
-  if (profile.role !== "ADMIN") return NextResponse.json({ error: "Sin permiso" }, { status: 403 });
+  if (!hasPermission(profile.role, "suppliers:create")) return NextResponse.json({ error: "Sin permiso" }, { status: 403 });
 
   let body: unknown;
   try { body = await request.json(); }

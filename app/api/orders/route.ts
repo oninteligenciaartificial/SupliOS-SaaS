@@ -4,6 +4,7 @@ import { getTenantProfile } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { sendOrderConfirmation, sendNewOrderAlert } from "@/lib/email";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { hasPermission } from "@/lib/permissions";
 import { z } from "zod";
 
 const createSchema = z.object({
@@ -25,21 +26,31 @@ export async function GET(request: Request) {
 
   const { searchParams } = new URL(request.url);
   const status = searchParams.get("status");
+  const page = Math.max(1, parseInt(searchParams.get("page") ?? "1", 10));
+  const limit = Math.min(200, Math.max(1, parseInt(searchParams.get("limit") ?? "50", 10)));
+  const skip = (page - 1) * limit;
 
-  const orders = await prisma.order.findMany({
-    where: {
-      organizationId: profile.organizationId,
-      ...(status ? { status: status as never } : {}),
-    },
-    include: {
-      items: { include: { product: true } },
-      customer: true,
-      staff: { select: { id: true, name: true } },
-    },
-    orderBy: { createdAt: "desc" },
-  });
+  const where = {
+    organizationId: profile.organizationId,
+    ...(status ? { status: status as never } : {}),
+  };
 
-  return NextResponse.json(orders);
+  const [orders, total] = await Promise.all([
+    prisma.order.findMany({
+      where,
+      include: {
+        items: { include: { product: true } },
+        customer: true,
+        staff: { select: { id: true, name: true } },
+      },
+      orderBy: { createdAt: "desc" },
+      skip,
+      take: limit,
+    }),
+    prisma.order.count({ where }),
+  ]);
+
+  return NextResponse.json({ data: orders, meta: { total, page, limit, pages: Math.ceil(total / limit) } });
 }
 
 export async function POST(request: Request) {
@@ -49,6 +60,7 @@ export async function POST(request: Request) {
 
   const profile = await getTenantProfile();
   if (!profile) return NextResponse.json({ error: "No autorizado" }, { status: 401 });
+  if (!hasPermission(profile.role, "orders:create")) return NextResponse.json({ error: "Sin permiso" }, { status: 403 });
 
   const staffProfile = await prisma.profile.findUnique({ where: { userId: user.id }, select: { id: true } });
 

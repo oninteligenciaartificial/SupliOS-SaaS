@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { sendWelcomeEmail } from "@/lib/email";
+import { canUseFeature } from "@/lib/plans";
 import { z } from "zod";
 
 const schema = z.object({
@@ -21,8 +22,11 @@ export async function POST(request: Request) {
 
   const { slug, name, email, phone, birthday } = result.data;
 
-  const org = await prisma.organization.findUnique({ where: { slug }, select: { id: true, name: true } });
+  const org = await prisma.organization.findUnique({ where: { slug }, select: { id: true, name: true, plan: true } });
   if (!org) return NextResponse.json({ error: "Tienda no encontrada" }, { status: 404 });
+  if (!canUseFeature(org.plan as Parameters<typeof canUseFeature>[0], "registro_publico")) {
+    return NextResponse.json({ error: "Esta tienda no tiene registro público habilitado" }, { status: 403 });
+  }
 
   // Prevent duplicate email in same org
   if (email) {

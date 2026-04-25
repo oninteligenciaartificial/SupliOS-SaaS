@@ -61,16 +61,17 @@ export default function CustomersPage() {
   const fetchCustomers = useCallback(async () => {
     setLoading(true);
     const res = await fetch(`/api/customers${search ? `?search=${encodeURIComponent(search)}` : ""}`);
-    if (res.ok) setCustomers(await res.json());
+    if (res.ok) { const d = await res.json(); setCustomers(d.data ?? d); }
     setLoading(false);
   }, [search]);
 
   async function openHistory(c: Customer) {
     setViewCustomer(c);
     setLoadingOrders(true);
-    const res = await fetch("/api/orders");
+    const res = await fetch("/api/orders?limit=200");
     if (res.ok) {
-      const all: CustomerOrder[] = await res.json();
+      const d = await res.json();
+      const all: CustomerOrder[] = d.data ?? d;
       setCustomerOrders(all.filter((o) => o.customer?.id === c.id));
     }
     setLoadingOrders(false);

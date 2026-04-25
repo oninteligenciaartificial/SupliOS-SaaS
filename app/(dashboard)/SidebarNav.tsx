@@ -19,8 +19,9 @@ export function SidebarNav({ links, lockedHrefs, onNavigate }: Props) {
 
   useEffect(() => {
     fetch("/api/products")
-      .then(r => r.ok ? r.json() : [])
-      .then((products: { stock: number; minStock: number }[]) => {
+      .then(r => r.ok ? r.json() : { data: [] })
+      .then((res: { data?: { stock: number; minStock: number }[] } | { stock: number; minStock: number }[]) => {
+        const products = Array.isArray(res) ? res : (res.data ?? []);
         setCriticalStock(products.filter(p => p.stock <= p.minStock).length);
       })
       .catch(() => {});

@@ -18,7 +18,7 @@ const schema = z.object({
   adminName: z.string().min(1),
   adminEmail: z.string().email(),
   adminPassword: z.string().min(8),
-  plan: z.enum(["BASICO", "PRO", "EMPRESARIAL"]).default("BASICO"),
+  plan: z.enum(["BASICO", "CRECER", "PRO", "EMPRESARIAL"]).default("BASICO"),
 });
 
 // GET — lista todas las organizaciones

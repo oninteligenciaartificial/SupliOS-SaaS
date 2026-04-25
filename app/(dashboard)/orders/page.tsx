@@ -57,7 +57,7 @@ export default function OrdersPage() {
     setLoading(true);
     const url = filterStatus ? `/api/orders?status=${filterStatus}` : "/api/orders";
     const res = await fetch(url);
-    if (res.ok) setOrders(await res.json());
+    if (res.ok) { const d = await res.json(); setOrders(d.data ?? d); }
     setLoading(false);
   }, [filterStatus]);
 
@@ -69,8 +69,8 @@ export default function OrdersPage() {
     setShowModal(true);
     setLoadingModal(true);
     const [p, c] = await Promise.all([fetch("/api/products"), fetch("/api/customers")]);
-    if (p.ok) setProducts(await p.json());
-    if (c.ok) setCustomers(await c.json());
+    if (p.ok) { const d = await p.json(); setProducts(d.data ?? d); }
+    if (c.ok) { const d = await c.json(); setCustomers(d.data ?? d); }
     setLoadingModal(false);
   }
 

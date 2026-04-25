@@ -87,7 +87,7 @@ export default function Inventory() {
       fetch("/api/products"),
       fetch("/api/categories"),
     ]);
-    if (prodRes.ok) setProducts(await prodRes.json());
+    if (prodRes.ok) { const d = await prodRes.json(); setProducts(d.data ?? d); }
     if (catRes.ok) setCategories(await catRes.json());
     setLoading(false);
   }, []);

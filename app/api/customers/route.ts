@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { getTenantProfile } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { PLAN_LIMITS } from "@/lib/plans";
+import { hasPermission } from "@/lib/permissions";
 import { z } from "zod";
 
 const createSchema = z.object({
@@ -17,24 +18,42 @@ const createSchema = z.object({
 export async function GET(request: Request) {
   const profile = await getTenantProfile();
   if (!profile) return NextResponse.json({ error: "No autorizado" }, { status: 401 });
+  if (!hasPermission(profile.role, "customers:view")) return NextResponse.json({ error: "Sin permiso" }, { status: 403 });
 
   const { searchParams } = new URL(request.url);
   const search = searchParams.get("search");
+  const page = Math.max(1, parseInt(searchParams.get("page") ?? "1", 10));
+  const limit = Math.min(200, Math.max(1, parseInt(searchParams.get("limit") ?? "100", 10)));
+  const skip = (page - 1) * limit;
 
-  const customers = await prisma.customer.findMany({
-    where: {
-      organizationId: profile.organizationId,
-      ...(search ? { name: { contains: search, mode: "insensitive" } } : {}),
-    },
-    orderBy: { name: "asc" },
-  });
+  const where = {
+    organizationId: profile.organizationId,
+    ...(search ? {
+      OR: [
+        { name: { contains: search, mode: "insensitive" as const } },
+        { phone: { contains: search, mode: "insensitive" as const } },
+        { email: { contains: search, mode: "insensitive" as const } },
+      ],
+    } : {}),
+  };
 
-  return NextResponse.json(customers);
+  const [customers, total] = await Promise.all([
+    prisma.customer.findMany({
+      where,
+      orderBy: { name: "asc" },
+      skip,
+      take: limit,
+    }),
+    prisma.customer.count({ where }),
+  ]);
+
+  return NextResponse.json({ data: customers, meta: { total, page, limit, pages: Math.ceil(total / limit) } });
 }
 
 export async function POST(request: Request) {
   const profile = await getTenantProfile();
   if (!profile) return NextResponse.json({ error: "No autorizado" }, { status: 401 });
+  if (!hasPermission(profile.role, "customers:create")) return NextResponse.json({ error: "Sin permiso" }, { status: 403 });
 
   const { maxCustomers } = PLAN_LIMITS[profile.plan];
   if (isFinite(maxCustomers)) {
