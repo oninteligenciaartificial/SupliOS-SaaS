@@ -1,5 +1,8 @@
 import Link from "next/link";
 import { Check } from "lucide-react";
+import { createClient } from "@/lib/supabase/server";
+import { prisma } from "@/lib/prisma";
+import { redirect } from "next/navigation";
 
 const FEATURES = [
   "POS + Inventario + Pedidos",
@@ -12,7 +15,15 @@ const FEATURES = [
   "Emails automaticos a clientes",
 ];
 
-export default function HomePage() {
+export default async function HomePage() {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+
+  if (user) {
+    const profile = await prisma.profile.findUnique({ where: { userId: user.id }, select: { role: true } });
+    if (profile?.role === "SUPERADMIN") redirect("/superadmin");
+    else if (profile) redirect("/inventory");
+  }
   return (
     <div className="min-h-screen bg-[#0a0a0a] text-white">
       {/* Nav */}
