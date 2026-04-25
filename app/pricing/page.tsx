@@ -5,6 +5,7 @@ const PLANS = [
   {
     name: "Básico",
     price: "$39",
+    priceBOB: "Bs. 270",
     period: "/mes",
     color: "text-white",
     border: "border-white/10",
@@ -28,6 +29,7 @@ const PLANS = [
   {
     name: "Crecer",
     price: "$59",
+    priceBOB: "Bs. 410",
     period: "/mes",
     color: "text-blue-300",
     border: "border-blue-400/30",
@@ -49,6 +51,7 @@ const PLANS = [
   {
     name: "Pro",
     price: "$89",
+    priceBOB: "Bs. 620",
     period: "/mes",
     color: "text-blue-400",
     border: "border-blue-500/30",
@@ -67,6 +70,7 @@ const PLANS = [
   {
     name: "Empresarial",
     price: "$139",
+    priceBOB: "Bs. 965",
     period: "/mes",
     color: "text-brand-kinetic-orange",
     border: "border-brand-kinetic-orange/40",
@@ -144,6 +148,7 @@ export default function PricingPage() {
                   <span className="text-3xl font-display font-bold text-white">{plan.price}</span>
                   <span className="text-brand-muted text-sm mb-1">{plan.period}</span>
                 </div>
+                <div className="text-brand-muted text-xs mt-0.5">{plan.priceBOB}/mes</div>
                 <p className="text-xs text-brand-muted mt-2 leading-relaxed">{plan.limits}</p>
               </div>
 
