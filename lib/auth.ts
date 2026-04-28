@@ -35,13 +35,7 @@ export async function getTenantProfile() {
     return null;
   }
 
-  // Regular user: clear stale impersonation cookies
-  const cookieStore = await cookies();
-  if (cookieStore.get("impersonate_org_id")) {
-    cookieStore.delete("impersonate_org_id");
-    cookieStore.delete("impersonate_org_name");
-  }
-
+  // Regular user — always uses their own organizationId, impersonation cookies are irrelevant
   if (profile.organizationId) {
     const org = await prisma.organization.findUnique({
       where: { id: profile.organizationId },
