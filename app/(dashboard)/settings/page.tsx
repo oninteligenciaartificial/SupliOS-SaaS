@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { User, Building2, Lock, Save, Activity, Link, Copy, Check, CreditCard, Receipt } from "lucide-react";
+import { User, Building2, Lock, Save, Activity, Link, Copy, Check, CreditCard, Receipt, Package } from "lucide-react";
 import { PLAN_META, type PlanType } from "@/lib/plans";
 
 interface Profile {
@@ -32,6 +32,7 @@ interface LogEntry {
 }
 
 const inp = "w-full px-4 py-2.5 rounded-xl bg-white/5 border border-white/10 text-white placeholder-brand-muted focus:outline-none focus:border-brand-kinetic-orange transition-colors";
+const sel = `${inp} appearance-none bg-[#1a1a1a] [&>option]:bg-[#1a1a1a] [&>option]:text-white`;
 
 export default function SettingsPage() {
   const [profile, setProfile] = useState<Profile | null>(null);
@@ -130,6 +131,25 @@ export default function SettingsPage() {
           </section>
         )}
 
+      {isAdmin && (
+          <section className="glass-panel p-6 rounded-3xl animate-pop">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="p-2 rounded-lg bg-brand-kinetic-orange/10">
+                  <Package size={18} className="text-brand-kinetic-orange" />
+                </div>
+                <div>
+                  <h2 className="font-display font-bold text-white">Add-ons</h2>
+                  <p className="text-xs text-brand-muted mt-0.5">Funciones adicionales habilitadas en tu plan</p>
+                </div>
+              </div>
+              <a href="/addons" className="text-sm font-bold text-brand-kinetic-orange hover:underline">
+                Ver add-ons →
+              </a>
+            </div>
+          </section>
+        )}
+
       {isAdmin && profile.organization && (
           <section className="glass-panel p-6 rounded-3xl space-y-4 animate-pop">
             <div className="flex items-center gap-3 mb-2">
@@ -153,7 +173,7 @@ export default function SettingsPage() {
               </div>
               <div className="space-y-1.5">
                 <label className="text-sm text-brand-muted">Moneda</label>
-                <select value={orgCurrency} onChange={(e) => setOrgCurrency(e.target.value)} className={inp}>
+                <select value={orgCurrency} onChange={(e) => setOrgCurrency(e.target.value)} className={sel} style={{ colorScheme: "dark" }}>
                   <option value="BOB">BOB — Boliviano</option>
                   <option value="USD">USD — Dolar Americano</option>
                   <option value="MXN">MXN — Peso Mexicano</option>

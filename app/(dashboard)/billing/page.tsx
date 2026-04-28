@@ -1,11 +1,21 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { PLAN_META, PLAN_PRICES_BOB, type PlanType } from "@/lib/plans";
-import { Check, QrCode, Copy, MessageCircle, ChevronDown, ChevronUp, Trash2 } from "lucide-react";
+import { PLAN_META, PLAN_PRICES_BOB, ADDON_META, type PlanType } from "@/lib/plans";
+import { Check, QrCode, Copy, MessageCircle, ChevronDown, ChevronUp, Trash2, Zap, X } from "lucide-react";
 
 const PLANS: PlanType[] = ["BASICO", "CRECER", "PRO", "EMPRESARIAL"];
+const ALL_ADDONS = ["WHATSAPP", "FACTURACION", "MERCADOPAGO", "ECOMMERCE", "CONTABILIDAD"] as const;
+type AddonType = typeof ALL_ADDONS[number];
 const WA_NUMBER = "59175470140";
+
+const ADDON_WA_MSG: Record<AddonType, string> = {
+  WHATSAPP:    "Hola! Me interesa activar el add-on *WhatsApp Business* ($40/mes) en GestiOS. ¿Cómo procedo?",
+  FACTURACION: "Hola! Me interesa el add-on de *Facturación SIAT* para Bolivia en GestiOS. ¿Cuándo estará disponible?",
+  MERCADOPAGO: "Hola! Quiero activar el add-on de *Pagos QR Bolivia* ($15/mes) en GestiOS. ¿Cómo procedo?",
+  ECOMMERCE:   "Hola! Me interesa el add-on de *E-commerce* ($20/mes) en GestiOS. ¿Cómo procedo?",
+  CONTABILIDAD:"Hola! Quiero activar la *Exportación Contable* ($18/mes) en GestiOS. ¿Cómo procedo?",
+};
 
 const MONTH_DISCOUNT: Record<number, number> = { 1: 0, 3: 5, 6: 10, 12: 15 };
 
@@ -36,6 +46,7 @@ export default function BillingPage() {
   const [months, setMonths] = useState(1);
   const [orgName, setOrgName] = useState("mi tienda");
   const [requests, setRequests] = useState<PaymentRequest[]>([]);
+  const [addons, setAddons] = useState<{ addon: AddonType; active: boolean }[]>([]);
   const [copied, setCopied] = useState(false);
   const [showHistory, setShowHistory] = useState(false);
   const [cancelling, setCancelling] = useState<string | null>(null);
@@ -51,6 +62,10 @@ export default function BillingPage() {
     fetch("/api/me")
       .then(r => r.json())
       .then(data => { if (data.organization?.name) setOrgName(data.organization.name); });
+    fetch("/api/addons")
+      .then(r => r.ok ? r.json() : [])
+      .then(data => setAddons(Array.isArray(data) ? data : []))
+      .catch(() => {});
   }, []);
 
   function openWhatsApp() {
@@ -269,6 +284,55 @@ export default function BillingPage() {
           </div>
         </div>
       </div>
+
+      {/* Add-ons */}
+      <section className="glass-panel rounded-2xl p-5 space-y-4">
+        <div className="flex items-center gap-2">
+          <Zap size={16} className="text-brand-kinetic-orange" />
+          <h2 className="text-sm font-bold text-brand-muted uppercase tracking-wider">Add-ons disponibles</h2>
+        </div>
+        <div className="divide-y divide-white/5">
+          {ALL_ADDONS.map(addon => {
+            const meta = ADDON_META[addon];
+            const active = addons.some(a => a.addon === addon && a.active);
+            return (
+              <div key={addon} className="flex items-center justify-between py-3 gap-3">
+                <div className="flex items-center gap-3 min-w-0">
+                  <div className={`p-1.5 rounded-lg flex-shrink-0 ${active ? "bg-brand-kinetic-orange/15" : "bg-white/5"}`}>
+                    <Zap size={14} className={active ? "text-brand-kinetic-orange" : "text-brand-muted"} />
+                  </div>
+                  <div className="min-w-0">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <span className="text-white text-sm font-medium">{meta.label}</span>
+                      {meta.comingSoon && (
+                        <span className="px-1.5 py-0.5 rounded-full bg-white/10 text-white/40 text-[10px] font-bold">Próximamente</span>
+                      )}
+                    </div>
+                    <span className="text-brand-kinetic-orange text-xs">{meta.price}</span>
+                  </div>
+                </div>
+                <div className="flex items-center gap-2 flex-shrink-0">
+                  <span className={`flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-bold ${
+                    meta.comingSoon ? "bg-white/5 text-white/25"
+                      : active ? "bg-green-500/15 text-green-400"
+                      : "bg-white/5 text-brand-muted"
+                  }`}>
+                    {meta.comingSoon ? <><X size={11} /> Pronto</> : active ? <><Check size={11} /> Activo</> : <><X size={11} /> Inactivo</>}
+                  </span>
+                  {!meta.comingSoon && !active && (
+                    <button
+                      onClick={() => window.open(`https://wa.me/${WA_NUMBER}?text=${encodeURIComponent(ADDON_WA_MSG[addon])}`, "_blank")}
+                      className="flex items-center gap-1 px-2.5 py-1 rounded-full bg-[#25D366]/10 border border-[#25D366]/20 text-[#25D366] text-xs font-bold hover:bg-[#25D366]/20 transition-all"
+                    >
+                      <MessageCircle size={11} /> Solicitar
+                    </button>
+                  )}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </section>
     </div>
   );
 }
