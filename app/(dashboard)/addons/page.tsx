@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Zap, Check, X, Loader2, MessageCircle } from "lucide-react";
+import { Zap, Check, X, MessageCircle } from "lucide-react";
 import { ADDON_META } from "@/lib/plans";
 
 const WA_NUMBER = "59175470140";
@@ -25,7 +25,6 @@ const ALL_ADDONS: AddonType[] = ["WHATSAPP", "FACTURACION", "MERCADOPAGO", "ECOM
 export default function AddonsPage() {
   const [addons, setAddons] = useState<OrgAddon[]>([]);
   const [loading, setLoading] = useState(true);
-  const [saving, setSaving] = useState<AddonType | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [upgradeMsg, setUpgradeMsg] = useState<string | null>(null);
 
@@ -43,24 +42,6 @@ export default function AddonsPage() {
       else setError(body.error ?? "Error al cargar add-ons");
     }
     setLoading(false);
-  }
-
-  async function toggle(addon: AddonType, currentlyActive: boolean) {
-    setSaving(addon);
-    setError(null);
-    const res = await fetch("/api/addons", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ addon, active: !currentlyActive }),
-    });
-    if (res.ok) {
-      await fetchAddons();
-    } else {
-      const body = await res.json().catch(() => ({}));
-      if (body.upgrade) setUpgradeMsg(body.error);
-      else setError(body.error ?? "Error al actualizar add-on");
-    }
-    setSaving(null);
   }
 
   function isActive(addon: AddonType): boolean {
@@ -96,7 +77,6 @@ export default function AddonsPage() {
           {ALL_ADDONS.map((addon) => {
             const meta = ADDON_META[addon];
             const active = isActive(addon);
-            const isSaving = saving === addon;
 
             return (
               <div
@@ -119,27 +99,22 @@ export default function AddonsPage() {
                     </div>
                   </div>
 
-                  <button
-                    onClick={() => !upgradeMsg && !meta.comingSoon && toggle(addon, active)}
-                    disabled={isSaving || !!upgradeMsg || !!meta.comingSoon}
-                    className={`flex-shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold transition-all
-                      ${meta.comingSoon
-                        ? "bg-white/5 text-white/25 cursor-not-allowed"
-                        : active
-                          ? "bg-brand-kinetic-orange/15 text-brand-kinetic-orange hover:bg-red-500/15 hover:text-red-400"
-                          : "bg-white/5 text-brand-muted hover:bg-brand-kinetic-orange/10 hover:text-brand-kinetic-orange"
-                      } disabled:opacity-40 disabled:cursor-not-allowed`}
-                  >
-                    {isSaving ? (
-                      <Loader2 size={13} className="animate-spin" />
-                    ) : meta.comingSoon ? (
+                  {/* Read-only status badge — only superadmin can enable/disable */}
+                  <span className={`flex-shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold ${
+                    meta.comingSoon
+                      ? "bg-white/5 text-white/25"
+                      : active
+                        ? "bg-green-500/15 text-green-400"
+                        : "bg-white/5 text-brand-muted"
+                  }`}>
+                    {meta.comingSoon ? (
                       <><X size={13} /> Pronto</>
                     ) : active ? (
                       <><Check size={13} /> Activo</>
                     ) : (
                       <><X size={13} /> Inactivo</>
                     )}
-                  </button>
+                  </span>
                 </div>
 
                 <p className="text-xs text-brand-muted mt-3 leading-relaxed">{meta.description}</p>
