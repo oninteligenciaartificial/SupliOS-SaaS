@@ -13,29 +13,7 @@ export async function getTenantProfile() {
   const profile = await prisma.profile.findUnique({ where: { userId: user.id } });
   if (!profile) return null;
 
-  // Clear stale impersonation cookies for non-superadmins
-  if (profile.role !== "SUPERADMIN") {
-    const cookieStore = await cookies();
-    if (cookieStore.get("impersonate_org_id")) {
-      cookieStore.delete("impersonate_org_id");
-      cookieStore.delete("impersonate_org_name");
-    }
-  }
-
-  if (profile.organizationId) {
-    const org = await prisma.organization.findUnique({
-      where: { id: profile.organizationId },
-      select: { plan: true, planExpiresAt: true, trialEndsAt: true },
-    });
-    return {
-      ...profile,
-      organizationId: profile.organizationId,
-      plan: (org?.plan ?? "BASICO") as PlanType,
-      planExpiresAt: org?.planExpiresAt ?? null,
-      trialEndsAt: org?.trialEndsAt ?? null,
-    };
-  }
-
+  // SUPERADMIN: impersonation takes absolute priority over own organizationId
   if (profile.role === "SUPERADMIN") {
     const cookieStore = await cookies();
     const impersonateOrgId = cookieStore.get("impersonate_org_id")?.value;
@@ -53,6 +31,29 @@ export async function getTenantProfile() {
         trialEndsAt: org?.trialEndsAt ?? null,
       };
     }
+    // SUPERADMIN without impersonation — belongs at /superadmin, not tenant dashboard
+    return null;
+  }
+
+  // Regular user: clear stale impersonation cookies
+  const cookieStore = await cookies();
+  if (cookieStore.get("impersonate_org_id")) {
+    cookieStore.delete("impersonate_org_id");
+    cookieStore.delete("impersonate_org_name");
+  }
+
+  if (profile.organizationId) {
+    const org = await prisma.organization.findUnique({
+      where: { id: profile.organizationId },
+      select: { plan: true, planExpiresAt: true, trialEndsAt: true },
+    });
+    return {
+      ...profile,
+      organizationId: profile.organizationId,
+      plan: (org?.plan ?? "BASICO") as PlanType,
+      planExpiresAt: org?.planExpiresAt ?? null,
+      trialEndsAt: org?.trialEndsAt ?? null,
+    };
   }
 
   return null;
