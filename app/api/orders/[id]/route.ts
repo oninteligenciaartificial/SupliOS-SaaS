@@ -1,8 +1,10 @@
 import { NextResponse } from "next/server";
+import { createClient } from "@/lib/supabase/server";
 import { getTenantProfile } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { sendOrderStatusUpdate, sendLoyaltyPointsEmail } from "@/lib/email";
 import { hasPermission } from "@/lib/permissions";
+import { logAudit } from "@/lib/audit";
 import { z } from "zod";
 
 const updateSchema = z.object({
@@ -28,8 +30,10 @@ export async function GET(_request: Request, { params }: { params: Promise<{ id:
 }
 
 export async function PATCH(request: Request, { params }: { params: Promise<{ id: string }> }) {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
   const profile = await getTenantProfile();
-  if (!profile) return NextResponse.json({ error: "No autorizado" }, { status: 401 });
+  if (!profile || !user) return NextResponse.json({ error: "No autorizado" }, { status: 401 });
   if (!hasPermission(profile.role, "orders:edit")) return NextResponse.json({ error: "Sin permiso" }, { status: 403 });
 
   const { id } = await params;
@@ -49,6 +53,8 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
   if (!result.success) return NextResponse.json({ error: "Datos invalidos" }, { status: 400 });
 
   const updated = await prisma.order.update({ where: { id }, data: result.data });
+
+  logAudit({ orgId: profile.organizationId, orgPlan: profile.plan, userId: user.id, action: "update", entityType: "order", entityId: id, before: { status: order.status }, after: { status: result.data.status } });
 
   // Restore stock when cancelling
   if (result.data.status === "CANCELADO" && order.status !== "CANCELADO") {

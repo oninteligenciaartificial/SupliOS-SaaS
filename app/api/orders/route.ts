@@ -7,6 +7,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { hasPermission } from "@/lib/permissions";
 import { z } from "zod";
 import { Prisma } from "@prisma/client";
+import { logAudit } from "@/lib/audit";
 
 const createSchema = z.object({
   customerName: z.string().min(1),
@@ -14,6 +15,7 @@ const createSchema = z.object({
   paymentMethod: z.enum(["EFECTIVO", "TARJETA", "TRANSFERENCIA"]).default("EFECTIVO"),
   shippingAddress: z.string().optional(),
   notes: z.string().optional(),
+  loyaltyPointsRedeemed: z.number().int().min(0).optional(),
   items: z.array(z.object({
     productId: z.string(),
     quantity: z.number().int().min(1),
@@ -78,10 +80,22 @@ export async function POST(request: Request) {
   const result = createSchema.safeParse(body);
   if (!result.success) return NextResponse.json({ error: "Datos invalidos", details: result.error.issues }, { status: 400 });
 
-  const { customerName, customerId, paymentMethod, shippingAddress, notes, items } = result.data;
-  const total = items.reduce((sum: number, i: { quantity: number; unitPrice: number }) => sum + i.quantity * i.unitPrice, 0);
+  const { customerName, customerId, paymentMethod, shippingAddress, notes, loyaltyPointsRedeemed, items } = result.data;
+  const subtotalRaw = items.reduce((sum: number, i: { quantity: number; unitPrice: number }) => sum + i.quantity * i.unitPrice, 0);
 
-  const [order] = await prisma.$transaction([
+  // 10 points = Bs. 1 discount
+  const POINTS_TO_BOB = 0.1;
+  let pointsDiscount = 0;
+  if (loyaltyPointsRedeemed && loyaltyPointsRedeemed > 0 && customerId) {
+    const customer = await prisma.customer.findFirst({ where: { id: customerId, organizationId: profile.organizationId }, select: { loyaltyPoints: true } });
+    if (!customer) return NextResponse.json({ error: "Cliente no encontrado" }, { status: 404 });
+    const maxRedeemable = customer.loyaltyPoints;
+    const actualPoints = Math.min(loyaltyPointsRedeemed, maxRedeemable);
+    pointsDiscount = Math.min(actualPoints * POINTS_TO_BOB, subtotalRaw);
+  }
+  const total = Math.max(0, subtotalRaw - pointsDiscount);
+
+  const txOps: Parameters<typeof prisma.$transaction>[0] = [
     prisma.order.create({
       data: {
         organizationId: profile.organizationId,
@@ -90,7 +104,9 @@ export async function POST(request: Request) {
         staffId: staffProfile?.id ?? null,
         paymentMethod,
         shippingAddress: shippingAddress ?? null,
-        notes: notes ?? null,
+        notes: loyaltyPointsRedeemed && loyaltyPointsRedeemed > 0
+          ? `${notes ? notes + " | " : ""}Puntos canjeados: ${loyaltyPointsRedeemed} (-Bs. ${pointsDiscount.toFixed(2)})`
+          : (notes ?? null),
         total,
         items: {
           create: items.map((i): Prisma.OrderItemUncheckedCreateWithoutOrderInput => ({
@@ -115,7 +131,17 @@ export async function POST(request: Request) {
             data: { stock: { decrement: i.quantity } },
           })
     ),
-  ]);
+    ...(loyaltyPointsRedeemed && loyaltyPointsRedeemed > 0 && customerId
+      ? [prisma.customer.update({
+          where: { id: customerId },
+          data: { loyaltyPoints: { decrement: loyaltyPointsRedeemed } },
+        })]
+      : []),
+  ] as Parameters<typeof prisma.$transaction>[0];
+
+  const [order] = await prisma.$transaction(txOps);
+
+  logAudit({ orgId: profile.organizationId, orgPlan: profile.plan, userId: user.id, action: "create", entityType: "order", entityId: order.id, after: { total, items: items.length, paymentMethod } });
 
   const org = await prisma.organization.findUnique({ where: { id: profile.organizationId }, select: { name: true } });
   const orgName = org?.name ?? "Tu Tienda";

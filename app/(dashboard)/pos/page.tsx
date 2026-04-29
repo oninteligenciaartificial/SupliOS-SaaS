@@ -1,7 +1,7 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
-import { Search, Plus, Minus, Trash2, ShoppingCart, CheckCircle, X, Tag, ChevronUp, Layers } from "lucide-react";
+import { useState, useEffect, useCallback, useRef } from "react";
+import { Search, Plus, Minus, Trash2, ShoppingCart, CheckCircle, X, Tag, ChevronUp, Layers, Star } from "lucide-react";
 
 interface ProductVariant {
   id: string;
@@ -21,6 +21,13 @@ interface Product {
   category: { name: string } | null;
   hasVariants: boolean;
   variants?: ProductVariant[];
+}
+
+interface Customer {
+  id: string;
+  name: string;
+  phone: string | null;
+  loyaltyPoints: number;
 }
 
 interface Discount {
@@ -64,6 +71,11 @@ export default function POSPage() {
   const [success, setSuccess] = useState(false);
   const [cartOpen, setCartOpen] = useState(false);
   const [variantTarget, setVariantTarget] = useState<Product | null>(null);
+  const [customerSearch, setCustomerSearch] = useState("");
+  const [customerResults, setCustomerResults] = useState<Customer[]>([]);
+  const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null);
+  const [pointsToRedeem, setPointsToRedeem] = useState(0);
+  const customerSearchRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const fetchData = useCallback(async () => {
     setLoading(true);
@@ -74,6 +86,30 @@ export default function POSPage() {
   }, []);
 
   useEffect(() => { fetchData(); }, [fetchData]);
+
+  function searchCustomers(q: string) {
+    setCustomerSearch(q);
+    if (customerSearchRef.current) clearTimeout(customerSearchRef.current);
+    if (!q.trim()) { setCustomerResults([]); return; }
+    customerSearchRef.current = setTimeout(async () => {
+      const res = await fetch(`/api/customers?search=${encodeURIComponent(q)}&limit=5`);
+      if (res.ok) { const d = await res.json(); setCustomerResults(d.data ?? []); }
+    }, 300);
+  }
+
+  function selectCustomer(c: Customer) {
+    setSelectedCustomer(c);
+    setCustomerSearch(c.name);
+    setCustomerResults([]);
+    setPointsToRedeem(0);
+  }
+
+  function clearCustomer() {
+    setSelectedCustomer(null);
+    setCustomerSearch("");
+    setCustomerResults([]);
+    setPointsToRedeem(0);
+  }
 
   const categories = Array.from(new Set(products.map((p) => p.category?.name ?? "Sin categoria"))).sort();
 
@@ -136,6 +172,9 @@ export default function POSPage() {
 
   const subtotal = cart.reduce((s, i) => s + i.qty * i.effectivePrice, 0);
   const totalItems = cart.reduce((s, i) => s + i.qty, 0);
+  const POINTS_TO_BOB = 0.1;
+  const maxRedeemable = selectedCustomer ? selectedCustomer.loyaltyPoints : 0;
+  const pointsDiscount = Math.min(pointsToRedeem * POINTS_TO_BOB, subtotal);
 
   function applyDiscount() {
     setDiscountError("");
@@ -158,7 +197,7 @@ export default function POSPage() {
       : Math.min(Number(appliedDiscount.value), subtotal)
     : 0;
 
-  const total = subtotal - discountAmount;
+  const total = Math.max(0, subtotal - discountAmount - pointsDiscount);
 
   async function handleSell() {
     if (cart.length === 0) return;
@@ -167,8 +206,10 @@ export default function POSPage() {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        customerName: customerName.trim() || "Cliente mostrador",
+        customerName: selectedCustomer?.name ?? customerName.trim() || "Cliente mostrador",
+        customerId: selectedCustomer?.id,
         paymentMethod,
+        loyaltyPointsRedeemed: pointsToRedeem > 0 ? pointsToRedeem : undefined,
         items: cart.map((i) => ({
           productId: i.product.id,
           quantity: i.qty,
@@ -192,6 +233,7 @@ export default function POSPage() {
       setAppliedDiscount(null);
       setDiscountCode("");
       setCartOpen(false);
+      clearCustomer();
       fetchData();
       setTimeout(() => setSuccess(false), 3000);
     }
@@ -247,12 +289,64 @@ export default function POSPage() {
       </div>
 
       <div className="p-4 border-t border-white/5 space-y-3">
-        <input
-          value={customerName}
-          onChange={(e) => setCustomerName(e.target.value)}
-          placeholder="Cliente (opcional)"
-          className="w-full px-4 py-2.5 rounded-xl bg-white/5 border border-white/10 text-white placeholder-brand-muted focus:outline-none focus:border-brand-kinetic-orange transition-colors text-sm"
-        />
+        {/* Customer search */}
+        <div className="relative">
+          <input
+            value={customerSearch}
+            onChange={(e) => searchCustomers(e.target.value)}
+            placeholder="Buscar cliente (opcional)"
+            className="w-full px-4 py-2.5 rounded-xl bg-white/5 border border-white/10 text-white placeholder-brand-muted focus:outline-none focus:border-brand-kinetic-orange transition-colors text-sm"
+          />
+          {selectedCustomer && (
+            <button onClick={clearCustomer} className="absolute right-3 top-1/2 -translate-y-1/2 text-brand-muted hover:text-white transition-colors">
+              <X size={13} />
+            </button>
+          )}
+          {customerResults.length > 0 && (
+            <div className="absolute z-10 w-full mt-1 glass-panel rounded-xl overflow-hidden shadow-lg">
+              {customerResults.map((c) => (
+                <button key={c.id} onClick={() => selectCustomer(c)}
+                  className="w-full text-left px-4 py-2.5 hover:bg-white/10 transition-colors flex justify-between items-center">
+                  <div>
+                    <span className="text-white text-sm">{c.name}</span>
+                    {c.phone && <span className="text-brand-muted text-xs ml-2">{c.phone}</span>}
+                  </div>
+                  {c.loyaltyPoints > 0 && (
+                    <span className="text-xs text-yellow-400 flex items-center gap-1">
+                      <Star size={10} /> {c.loyaltyPoints} pts
+                    </span>
+                  )}
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+        {selectedCustomer && selectedCustomer.loyaltyPoints > 0 && (
+          <div className="px-4 py-3 rounded-xl bg-yellow-400/10 border border-yellow-400/20 space-y-2">
+            <div className="flex items-center justify-between">
+              <span className="text-yellow-400 text-xs flex items-center gap-1.5 font-medium">
+                <Star size={12} /> {selectedCustomer.loyaltyPoints} puntos disponibles
+              </span>
+              <span className="text-yellow-400/60 text-xs">10 pts = Bs. 1</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <input
+                type="number"
+                min={0}
+                max={maxRedeemable}
+                value={pointsToRedeem || ""}
+                onChange={(e) => setPointsToRedeem(Math.min(Math.max(0, parseInt(e.target.value) || 0), maxRedeemable))}
+                placeholder="Puntos a canjear"
+                className="flex-1 px-3 py-2 rounded-xl bg-white/5 border border-yellow-400/20 text-white placeholder-brand-muted focus:outline-none focus:border-yellow-400 transition-colors text-sm"
+              />
+              {pointsToRedeem > 0 && (
+                <button onClick={() => setPointsToRedeem(0)} className="text-brand-muted hover:text-white transition-colors">
+                  <X size={13} />
+                </button>
+              )}
+            </div>
+          </div>
+        )}
         <div className="grid grid-cols-3 gap-1.5">
           {(["EFECTIVO", "TARJETA", "TRANSFERENCIA"] as const).map((m) => (
             <button key={m} type="button" onClick={() => setPaymentMethod(m)}
@@ -289,6 +383,12 @@ export default function POSPage() {
           {appliedDiscount && (
             <div className="flex justify-between text-sm text-brand-growth-neon">
               <span>Descuento</span><span>-${fmt(discountAmount)}</span>
+            </div>
+          )}
+          {pointsDiscount > 0 && (
+            <div className="flex justify-between text-sm text-yellow-400">
+              <span className="flex items-center gap-1"><Star size={11} /> {pointsToRedeem} puntos</span>
+              <span>-${fmt(pointsDiscount)}</span>
             </div>
           )}
           <div className="flex justify-between text-xl font-bold text-white pt-1 border-t border-white/10">

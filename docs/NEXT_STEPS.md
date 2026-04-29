@@ -103,8 +103,8 @@ Storefront público en `/{slug}/tienda`. La DB ya soporta productos con variante
 
 | Feature | Modelo DB | Backend | UI |
 |---|---|---|---|
-| Canje de puntos de lealtad | ✅ `Customer.loyaltyPoints` | ❌ | ❌ |
-| Audit log viewer | ✅ `AuditLog` | ✅ `lib/audit.ts` | ❌ sin página |
+| Canje de puntos de lealtad | ✅ `Customer.loyaltyPoints` | ✅ decrement en POST /api/orders | ✅ POS con búsqueda cliente |
+| Audit log viewer | ✅ `AuditLog` | ✅ `lib/audit.ts` + GET /api/audit | ✅ `/audit` página |
 | Foto de producto | ✅ `Product.imageUrl` | ❌ sin upload | ❌ |
 | Barcode scanner en POS | ✅ `Product.barcode` | — | ❌ |
 | Filtro por sucursal en reportes | ✅ `Order.branchId` | ❌ | ❌ |
@@ -133,9 +133,9 @@ Storefront público en `/{slug}/tienda`. La DB ya soporta productos con variante
 5. ✅ Exportación Contable — API `/api/reports/export` + botón en UI de reportes
 
 **P3 — Completar features existentes:**
-6. Audit log UI para plan EMPRESARIAL
-7. Canje de puntos de lealtad en POS
-8. logAudit() en routes críticos
+6. ✅ Audit log UI — `/audit` con paginación, filtros por entidad, before/after diff — resuelto 2026-04-29
+7. ✅ Canje de puntos de lealtad en POS — búsqueda de cliente, balance visible, descuento server-side — resuelto 2026-04-29
+8. ✅ logAudit() en routes críticos — orders create/update — resuelto 2026-04-29
 
 **P4 — Nuevas features:**
 9. Facturación SIAT
