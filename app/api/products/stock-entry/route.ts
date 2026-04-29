@@ -5,6 +5,7 @@ import { z } from "zod";
 
 const schema = z.object({
   productId: z.string().min(1),
+  variantId: z.string().optional(),
   quantity: z.number().int().min(1),
   notes: z.string().optional(),
 });
@@ -26,10 +27,24 @@ export async function POST(request: Request) {
   });
   if (!existing) return NextResponse.json({ error: "Producto no encontrado" }, { status: 404 });
 
-  const updated = await prisma.product.update({
-    where: { id: result.data.productId },
-    data: { stock: { increment: result.data.quantity } },
-  });
+  const { productId, variantId, quantity } = result.data;
 
+  if (variantId) {
+    const variant = await prisma.productVariant.findFirst({
+      where: { id: variantId, productId },
+    });
+    if (!variant) return NextResponse.json({ error: "Variante no encontrada" }, { status: 404 });
+
+    const updated = await prisma.productVariant.update({
+      where: { id: variantId },
+      data: { stock: { increment: quantity } },
+    });
+    return NextResponse.json(updated);
+  }
+
+  const updated = await prisma.product.update({
+    where: { id: productId },
+    data: { stock: { increment: quantity } },
+  });
   return NextResponse.json(updated);
 }

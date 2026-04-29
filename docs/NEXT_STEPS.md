@@ -32,22 +32,10 @@ Análisis al 2026-04-28. Basado en lectura directa del código.
 
 ## Bugs reales en el código actual
 
-### BUG 1 — Cancel de pedido no restaura stock de variantes
-**Archivo:** `app/api/orders/[id]/route.ts` líneas 54–62
+### ~~BUG 1 — Cancel de pedido no restaura stock de variantes~~ ✅ RESUELTO 2026-04-29
+**Archivo:** `app/api/orders/[id]/route.ts`
 
-El código siempre hace `prisma.product.update({ stock: increment })`, ignorando si el item tiene `variantId`. Para productos con variantes, el stock que se decrementó en `ProductVariant` nunca se restaura al cancelar.
-
-```typescript
-// Bug: no verifica variantId
-order.items.map((item) =>
-  prisma.product.update({ where: { id: item.productId }, data: { stock: { increment: item.quantity } } })
-)
-
-// Fix necesario: bifurcar igual que en POST /api/orders
-item.variantId
-  ? prisma.productVariant.update({ where: { id: item.variantId }, data: { stock: { increment: item.quantity } } })
-  : prisma.product.update({ where: { id: item.productId }, data: { stock: { increment: item.quantity } } })
-```
+Bifurcación por `variantId` aplicada tanto en cancel como en un-cancel. Mismo patrón que POST /api/orders.
 
 ---
 
@@ -68,12 +56,10 @@ const org = await prisma.organization.findFirst({
 
 ---
 
-### BUG 3 — Stock entry no soporta variantes
+### ~~BUG 3 — Stock entry no soporta variantes~~ ✅ RESUELTO 2026-04-29
 **Archivo:** `app/api/products/stock-entry/route.ts`
 
-Solo incrementa `Product.stock`. Para productos con `hasVariants=true`, el stock real vive en `ProductVariant.stock`. Entrar stock desde inventario en un producto con variantes no hace nada útil.
-
-**Fix:** agregar `variantId` opcional al body y bifurcar el update.
+`variantId` opcional agregado al schema. Si se provee, incrementa `ProductVariant.stock` con validación de ownership. Si no, incrementa `Product.stock`.
 
 ---
 
@@ -90,8 +76,8 @@ La función está lista y respeta el plan gate (solo EMPRESARIAL). Pero ningún 
 
 | Archivo | Qué falta |
 |---|---|
-| `app/api/orders/[id]/route.ts` | Stock restore en cancel no bifurca por variantId (Bug 1) |
-| `app/api/products/stock-entry/route.ts` | No soporta variantId (Bug 3) |
+| ~~`app/api/orders/[id]/route.ts`~~ | ✅ Bug 1 resuelto 2026-04-29 |
+| ~~`app/api/products/stock-entry/route.ts`~~ | ✅ Bug 3 resuelto 2026-04-29 |
 | `app/api/webhooks/whatsapp/route.ts` | Routing multi-tenant incorrecto (Bug 2) |
 | `lib/audit.ts` | Lista pero sin callers en ningún route (Bug 4) |
 | *(no existe)* `app/(dashboard)/audit/page.tsx` | Falta UI para audit log (plan EMPRESARIAL) |
@@ -150,8 +136,8 @@ CSV/Excel con formato para contadores bolivianos. El más simple de implementar 
 ## Prioridades sugeridas
 
 **P1 — Bugs que afectan datos:**
-1. Bug 1: stock restore en cancel para variantes
-2. Bug 3: stock entry para variantes
+1. ✅ Bug 1: stock restore en cancel para variantes — resuelto 2026-04-29
+2. ✅ Bug 3: stock entry para variantes — resuelto 2026-04-29
 3. Transacciones atómicas en POST /api/orders
 
 **P2 — Activar revenue:**

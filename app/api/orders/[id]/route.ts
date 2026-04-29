@@ -54,10 +54,15 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
   if (result.data.status === "CANCELADO" && order.status !== "CANCELADO") {
     await Promise.all(
       order.items.map((item) =>
-        prisma.product.update({
-          where: { id: item.productId },
-          data: { stock: { increment: item.quantity } },
-        })
+        item.variantId
+          ? prisma.productVariant.update({
+              where: { id: item.variantId },
+              data: { stock: { increment: item.quantity } },
+            })
+          : prisma.product.update({
+              where: { id: item.productId },
+              data: { stock: { increment: item.quantity } },
+            })
       )
     );
   }
@@ -66,10 +71,15 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
   if (result.data.status !== "CANCELADO" && order.status === "CANCELADO") {
     await Promise.all(
       order.items.map((item) =>
-        prisma.product.update({
-          where: { id: item.productId },
-          data: { stock: { decrement: item.quantity } },
-        })
+        item.variantId
+          ? prisma.productVariant.update({
+              where: { id: item.variantId },
+              data: { stock: { decrement: item.quantity } },
+            })
+          : prisma.product.update({
+              where: { id: item.productId },
+              data: { stock: { decrement: item.quantity } },
+            })
       )
     );
   }
