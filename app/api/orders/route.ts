@@ -95,51 +95,44 @@ export async function POST(request: Request) {
   }
   const total = Math.max(0, subtotalRaw - pointsDiscount);
 
-  const txOps: Parameters<typeof prisma.$transaction>[0] = [
-    prisma.order.create({
-      data: {
-        organizationId: profile.organizationId,
-        customerName: customerName.trim(),
-        customerId: customerId ?? null,
-        staffId: staffProfile?.id ?? null,
-        paymentMethod,
-        shippingAddress: shippingAddress ?? null,
-        notes: loyaltyPointsRedeemed && loyaltyPointsRedeemed > 0
-          ? `${notes ? notes + " | " : ""}Puntos canjeados: ${loyaltyPointsRedeemed} (-Bs. ${pointsDiscount.toFixed(2)})`
-          : (notes ?? null),
-        total,
-        items: {
-          create: items.map((i): Prisma.OrderItemUncheckedCreateWithoutOrderInput => ({
-            productId: i.productId,
-            quantity: i.quantity,
-            unitPrice: i.unitPrice,
-            variantId: i.variantId ?? null,
-            variantSnapshot: (i.variantSnapshot ?? Prisma.DbNull) as Prisma.InputJsonValue | typeof Prisma.DbNull,
-          })),
-        },
+  const orderCreateOp = prisma.order.create({
+    data: {
+      organizationId: profile.organizationId,
+      customerName: customerName.trim(),
+      customerId: customerId ?? null,
+      staffId: staffProfile?.id ?? null,
+      paymentMethod,
+      shippingAddress: shippingAddress ?? null,
+      notes: loyaltyPointsRedeemed && loyaltyPointsRedeemed > 0
+        ? `${notes ? notes + " | " : ""}Puntos canjeados: ${loyaltyPointsRedeemed} (-Bs. ${pointsDiscount.toFixed(2)})`
+        : (notes ?? null),
+      total,
+      items: {
+        create: items.map((i): Prisma.OrderItemUncheckedCreateWithoutOrderInput => ({
+          productId: i.productId,
+          quantity: i.quantity,
+          unitPrice: i.unitPrice,
+          variantId: i.variantId ?? null,
+          variantSnapshot: (i.variantSnapshot ?? Prisma.DbNull) as Prisma.InputJsonValue | typeof Prisma.DbNull,
+        })),
       },
-      include: { items: { include: { product: true } }, customer: true },
-    }),
-    ...items.map((i) =>
-      i.variantId
-        ? prisma.productVariant.update({
-            where: { id: i.variantId },
-            data: { stock: { decrement: i.quantity } },
-          })
-        : prisma.product.update({
-            where: { id: i.productId },
-            data: { stock: { decrement: i.quantity } },
-          })
-    ),
-    ...(loyaltyPointsRedeemed && loyaltyPointsRedeemed > 0 && customerId
-      ? [prisma.customer.update({
-          where: { id: customerId },
-          data: { loyaltyPoints: { decrement: loyaltyPointsRedeemed } },
-        })]
-      : []),
-  ] as Parameters<typeof prisma.$transaction>[0];
+    },
+    include: { items: { include: { product: true } }, customer: true },
+  });
 
-  const [order] = await prisma.$transaction(txOps);
+  const stockOps = items.map((i) =>
+    i.variantId
+      ? prisma.productVariant.update({ where: { id: i.variantId }, data: { stock: { decrement: i.quantity } } })
+      : prisma.product.update({ where: { id: i.productId }, data: { stock: { decrement: i.quantity } } })
+  );
+
+  const loyaltyOps = loyaltyPointsRedeemed && loyaltyPointsRedeemed > 0 && customerId
+    ? [prisma.customer.update({ where: { id: customerId }, data: { loyaltyPoints: { decrement: loyaltyPointsRedeemed } } })]
+    : [];
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const txResults = await (prisma.$transaction as (ops: any[]) => Promise<any[]>)([orderCreateOp, ...stockOps, ...loyaltyOps]);
+  const order = txResults[0] as Awaited<typeof orderCreateOp>;
 
   logAudit({ orgId: profile.organizationId, orgPlan: profile.plan, userId: user.id, action: "create", entityType: "order", entityId: order.id, after: { total, items: items.length, paymentMethod } });
 

@@ -206,7 +206,7 @@ export default function POSPage() {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        customerName: selectedCustomer?.name ?? customerName.trim() || "Cliente mostrador",
+        customerName: (selectedCustomer?.name ?? customerName.trim()) || "Cliente mostrador",
         customerId: selectedCustomer?.id,
         paymentMethod,
         loyaltyPointsRedeemed: pointsToRedeem > 0 ? pointsToRedeem : undefined,

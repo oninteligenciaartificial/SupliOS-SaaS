@@ -184,3 +184,84 @@ attributeSchema: (attributeSchema ?? Prisma.DbNull) as Prisma.InputJsonValue | t
 **Acción preventiva:** revisar PATCH/PUT de productos y cualquier route que escriba `attributeSchema` o `variantSnapshot`.
 
 ---
+
+## 2026-04-29 (3)
+
+### Build error — `??` mezclado con `||` sin paréntesis
+
+**Error:**
+```
+Turbopack build failed:
+app/(dashboard)/pos/page.tsx:209
+customerName: selectedCustomer?.name ?? customerName.trim() || "Cliente mostrador",
+```
+
+**Causa:** JS/TS no permite mezclar `??` con `||` sin agrupar — ambigüedad de precedencia, error de parser.
+
+**Fix:**
+```typescript
+// Antes
+selectedCustomer?.name ?? customerName.trim() || "Cliente mostrador"
+// Después
+(selectedCustomer?.name ?? customerName.trim()) || "Cliente mostrador"
+```
+
+**Regla:** Nunca mezclar `??` con `||`/`&&` sin paréntesis.
+
+---
+
+## 2026-04-29 (4)
+
+### Build error — `Parameters<typeof prisma.$transaction>[0]` resuelve overload de función, no de array
+
+**Error:**
+```
+app/api/orders/route.ts(98): TS2352 — Conversion to '(prisma) => Promise<R>' may be a mistake
+app/api/orders/route.ts(142): TS2488 — Type 'unknown' must have '[Symbol.iterator]()'
+app/api/orders/route.ts(148): TS7006 — Parameter 'i' implicitly has 'any' type
+```
+
+**Causa:** `prisma.$transaction` tiene dos overloads (array-form y function-form). `Parameters<>` resuelve al **último** overload definido (function-form), no al array-form. Todo el downstream queda tipado como `unknown`.
+
+**Fix:**
+```typescript
+// Separar la create op para capturar su tipo
+const orderCreateOp = prisma.order.create({ ..., include: { items: { include: { product: true } }, customer: true } });
+const stockOps = items.map(...);
+const loyaltyOps = [...];
+
+// Castear $transaction explícitamente al array-form
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const txResults = await (prisma.$transaction as (ops: any[]) => Promise<any[]>)([orderCreateOp, ...stockOps, ...loyaltyOps]);
+const order = txResults[0] as Awaited<typeof orderCreateOp>;
+```
+
+**Regla:** No usar `Parameters<typeof prisma.$transaction>[0]`. Castear directamente o usar `Prisma.PrismaPromise<any>[]`.
+
+---
+
+## 2026-04-29 (5)
+
+### Build error — `before: unknown` no asignable a `ReactNode` en JSX
+
+**Error:**
+```
+app/(dashboard)/audit/page.tsx(144): TS2322 — Type 'unknown' is not assignable to type 'ReactNode'
+app/(dashboard)/audit/page.tsx(152): TS2322 — Type 'unknown' is not assignable to type 'ReactNode'
+```
+
+**Causa:** `{log.before && <div>}` con `before: unknown` produce `unknown | false | JSX.Element` — TypeScript no puede asignar `unknown` a `ReactNode`.
+
+**Fix:**
+```typescript
+// Antes
+before: unknown;
+after: unknown;
+// Después
+before: Record<string, unknown> | null;
+after: Record<string, unknown> | null;
+```
+
+**Regla:** Para campos JSON de API en JSX, usar `Record<string, unknown> | null`. `null` es falsy → `&&` funciona. `unknown` no lo es.
+
+---

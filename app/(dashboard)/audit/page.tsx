@@ -9,8 +9,8 @@ interface AuditLog {
   action: string;
   entityType: string;
   entityId: string;
-  before: unknown;
-  after: unknown;
+  before: Record<string, unknown> | null;
+  after: Record<string, unknown> | null;
   ip: string | null;
   createdAt: string;
 }
