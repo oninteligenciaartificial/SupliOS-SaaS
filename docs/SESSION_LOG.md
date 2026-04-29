@@ -129,3 +129,31 @@ variantSnapshot: (i.variantSnapshot ?? Prisma.DbNull) as Prisma.InputJsonValue |
 **Patrón:** Cuando Zod produce `Record<string, unknown>` y Prisma exige `InputJsonValue`, castear en el sitio de uso. Zod ya valida a runtime que el contenido es JSON-serializable.
 
 ---
+
+## 2026-04-29
+
+### Build error — Zod `z.record()` 1-arg en otros archivos
+
+**Error:**
+```
+Type error: Expected 2-3 arguments, but got 1.
+app/api/products/[id]/variants/route.ts:8
+attributes: z.record(z.string()),
+```
+
+**Causa:** Mismo bug que entrada 1 — `z.record(valueType)` no compila en esta versión de Zod. Quedaron dos call sites más sin migrar.
+
+**Fix aplicado:**
+```typescript
+// app/api/products/[id]/variants/route.ts:8
+attributes: z.record(z.string(), z.string()),
+
+// app/api/products/route.ts:23
+attributeSchema: z.record(z.string(), z.array(z.string())).optional(),
+```
+
+**Archivos:** `app/api/products/[id]/variants/route.ts:8`, `app/api/products/route.ts:23`
+
+**Acción preventiva:** `grep "z.record("` antes de build cada vez que se toca Zod schema.
+
+---

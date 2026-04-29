@@ -20,7 +20,7 @@ const createSchema = z.object({
   batchExpiry: z.string().optional(),
   imageUrl: z.string().optional(),
   hasVariants: z.boolean().default(false),
-  attributeSchema: z.record(z.array(z.string())).optional(),
+  attributeSchema: z.record(z.string(), z.array(z.string())).optional(),
 });
 
 export async function GET(request: Request) {

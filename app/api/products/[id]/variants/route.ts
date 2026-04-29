@@ -5,7 +5,7 @@ import { hasPermission } from "@/lib/permissions";
 import { z } from "zod";
 
 const variantSchema = z.object({
-  attributes: z.record(z.string()),
+  attributes: z.record(z.string(), z.string()),
   sku: z.string().optional(),
   stock: z.number().int().min(0).default(0),
   price: z.number().min(0).optional(),
