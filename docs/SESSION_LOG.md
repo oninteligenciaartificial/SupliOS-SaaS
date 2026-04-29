@@ -157,3 +157,30 @@ attributeSchema: z.record(z.string(), z.array(z.string())).optional(),
 **Acción preventiva:** `grep "z.record("` antes de build cada vez que se toca Zod schema.
 
 ---
+
+## 2026-04-29 (2)
+
+### Build error — `attributeSchema` `null` no asignable a `Json?`
+
+**Error:**
+```
+Type error: Type 'Record<string, string[]> | null' is not assignable to
+type 'NullableJsonNullValueInput | InputJsonValue | undefined'.
+app/api/products/route.ts:101
+attributeSchema: attributeSchema ?? null,
+```
+
+**Causa:** Igual que entradas 3-4 — `Product.attributeSchema` es `Json?` en Prisma, no acepta `null` directo. Faltó migrarlo cuando se introdujo `Prisma.DbNull` para `OrderItem.variantSnapshot`.
+
+**Fix aplicado:**
+```typescript
+import { Prisma } from "@prisma/client";
+// ...
+attributeSchema: (attributeSchema ?? Prisma.DbNull) as Prisma.InputJsonValue | typeof Prisma.DbNull,
+```
+
+**Archivo:** `app/api/products/route.ts:2,102`
+
+**Acción preventiva:** revisar PATCH/PUT de productos y cualquier route que escriba `attributeSchema` o `variantSnapshot`.
+
+---

@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { getTenantProfile } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { Prisma } from "@prisma/client";
 import { PLAN_LIMITS } from "@/lib/plans";
 import { hasPermission } from "@/lib/permissions";
 import { z } from "zod";
@@ -98,7 +99,7 @@ export async function POST(request: Request) {
       batchExpiry: batchExpiry ? new Date(batchExpiry) : null,
       imageUrl: imageUrl ?? null,
       hasVariants,
-      attributeSchema: attributeSchema ?? null,
+      attributeSchema: (attributeSchema ?? Prisma.DbNull) as Prisma.InputJsonValue | typeof Prisma.DbNull,
     },
   });
 
