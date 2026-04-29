@@ -17,6 +17,8 @@ Deploy en **Vercel**. Sin base de datos local — la DB vive en Supabase. No hay
 - Cada tenant tiene `organizationId`. **Todos los queries deben filtrarse por `organizationId`** — no hay RLS en Supabase, el aislamiento es a nivel de código.
 - Emails se envían con `.catch(() => {})` — no bloquean la respuesta. Intencionado.
 - Stock decrements van a `ProductVariant` si `item.variantId` existe, a `Product` si no. No cambiar esta lógica.
+- **Campos `Json?` en Prisma** — nunca asignar `null` directo. Usar `Prisma.DbNull` para NULL, `undefined` para omitir, valor directo para guardar. Requiere `import { Prisma }` (no `import type`). Ver `SESSION_LOG.md` entradas 3-6 para el patrón completo.
+- **Zod `z.record()`** — esta versión requiere 2 argumentos: `z.record(z.string(), valueType)`. Un argumento no compila.
 
 ## Archivos clave
 
@@ -64,9 +66,9 @@ export async function GET(request: Request) {
 | PRO | 800 | ∞ | ∞ | 10 |
 | EMPRESARIAL | 1250 | ∞ | ∞ | ∞ |
 
-## Estado actual (2026-04-28)
+## Estado actual (2026-04-29)
 
-- Sistema de variantes por tipo de negocio: **implementado y en producción**
+- Sistema de variantes por tipo de negocio: **implementado** (5 build fixes aplicados 2026-04-28/29)
 - Add-ons: todos en `comingSoon: true` — UI visible pero no funcionales
 - WhatsApp: infraestructura lista, sin activar
 - Loyalty points: se acumulan, no hay canje
