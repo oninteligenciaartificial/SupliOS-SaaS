@@ -121,9 +121,18 @@ export default function ReportsPage() {
           <p className="text-brand-muted mt-1">Analisis de ventas e inventario.</p>
         </div>
         {data && (
-          <button onClick={exportExcel} className="flex items-center gap-2 px-4 py-2.5 rounded-full border border-white/10 text-brand-muted hover:text-white hover:bg-white/5 transition-colors text-sm font-medium">
-            <Download size={15} /> Exportar CSV
-          </button>
+          <div className="flex items-center gap-2">
+            <button onClick={exportExcel} className="flex items-center gap-2 px-4 py-2.5 rounded-full border border-white/10 text-brand-muted hover:text-white hover:bg-white/5 transition-colors text-sm font-medium">
+              <Download size={15} /> Resumen CSV
+            </button>
+            <a
+              href={`/api/reports/export?from=${from}&to=${to}`}
+              download
+              className="flex items-center gap-2 px-4 py-2.5 rounded-full border border-white/10 text-brand-muted hover:text-white hover:bg-white/5 transition-colors text-sm font-medium"
+            >
+              <Download size={15} /> Contabilidad CSV
+            </a>
+          </div>
         )}
       </header>
 

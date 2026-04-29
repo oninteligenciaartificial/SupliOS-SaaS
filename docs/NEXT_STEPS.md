@@ -39,20 +39,10 @@ Bifurcación por `variantId` aplicada tanto en cancel como en un-cancel. Mismo p
 
 ---
 
-### BUG 2 — Webhook WhatsApp no distingue org por phoneNumberId
-**Archivo:** `app/api/webhooks/whatsapp/route.ts` líneas 61–67
+### ~~BUG 2 — Webhook WhatsApp no distingue org por phoneNumberId~~ ✅ RESUELTO 2026-04-29
+**Archivos:** `prisma/schema.prisma`, `app/api/webhooks/whatsapp/route.ts`
 
-Busca org con `addons: { some: { addon: "WHATSAPP", active: true } }` — toma la **primera** org que tenga el addon activo. Si dos orgs tienen WhatsApp activo, los mensajes de ambas van a la misma org.
-
-```typescript
-// Bug: toma la primera org con WA activo, no la correcta
-const org = await prisma.organization.findFirst({
-  where: { addons: { some: { addon: "WHATSAPP", active: true } } },
-})
-
-// Fix: mapear phoneNumberId a org
-// Necesita campo phoneNumberId en Organization o en OrgAddon
-```
+`phoneNumberId` agregado a `OrgAddon`. Webhook ahora busca por `OrgAddon.phoneNumberId` — routing correcto multi-tenant. Migración: `20260429000000_addon_phone_number_id`.
 
 ---
 
@@ -78,7 +68,7 @@ La función está lista y respeta el plan gate (solo EMPRESARIAL). Pero ningún 
 |---|---|
 | ~~`app/api/orders/[id]/route.ts`~~ | ✅ Bug 1 resuelto 2026-04-29 |
 | ~~`app/api/products/stock-entry/route.ts`~~ | ✅ Bug 3 resuelto 2026-04-29 |
-| `app/api/webhooks/whatsapp/route.ts` | Routing multi-tenant incorrecto (Bug 2) |
+| ~~`app/api/webhooks/whatsapp/route.ts`~~ | ✅ Bug 2 resuelto 2026-04-29 |
 | `lib/audit.ts` | Lista pero sin callers en ningún route (Bug 4) |
 | *(no existe)* `app/(dashboard)/audit/page.tsx` | Falta UI para audit log (plan EMPRESARIAL) |
 
@@ -88,14 +78,12 @@ La función está lista y respeta el plan gate (solo EMPRESARIAL). Pero ningún 
 
 Todos están en `comingSoon: true`. La UI ya existe (read-only). Solo falta el backend de cada uno.
 
-### WhatsApp Business — El más cercano
-El backend ya existe (conversaciones API + webhook). Solo faltan variables de entorno y registrar el webhook en Meta.
+### WhatsApp Business ✅ Listo para activar
+Bug 2 resuelto, `comingSoon` removido. Solo falta configuración externa:
 
-**Pasos para activar:**
 1. Configurar en Vercel: `WA_PHONE_NUMBER_ID`, `WA_ACCESS_TOKEN`, `WA_APP_SECRET`, `WA_VERIFY_TOKEN`
 2. Registrar `https://gestios.app/api/webhooks/whatsapp` en Meta Business Dashboard
-3. Resolver Bug 2 (multi-tenant routing)
-4. Quitar `comingSoon: true` de `ADDON_META.WHATSAPP` en `lib/plans.ts`
+3. Al activar el addon para un tenant: guardar su `phoneNumberId` en `OrgAddon.phoneNumberId`
 
 ### Facturación SIAT Bolivia
 Integración con el SIN Bolivia. Requiere investigar intermediario (Nube Fiscal, FacturAPI) o API directa del SIN. Es la más compleja por regulación.
@@ -106,8 +94,8 @@ Integrar con PSP boliviano: Tigo Money, BiPago, o QR SWITCH del BCB.
 ### E-commerce
 Storefront público en `/{slug}/tienda`. La DB ya soporta productos con variantes y precios. Falta: UI pública + carrito + checkout.
 
-### Exportación Contable
-CSV/Excel con formato para contadores bolivianos. El más simple de implementar — es básicamente un query + formateo.
+### Exportación Contable ✅ Implementado
+`GET /api/reports/export?from=&to=` — requiere addon CONTABILIDAD activo. Exporta detalle de items con fecha, folio, cliente, categoría, producto, qty, precio, costo, subtotal, margen. Botón "Contabilidad CSV" en `/reports`.
 
 ---
 
@@ -141,8 +129,8 @@ CSV/Excel con formato para contadores bolivianos. El más simple de implementar 
 3. ✅ Transacciones atómicas en POST /api/orders — resuelto 2026-04-29
 
 **P2 — Activar revenue:**
-4. Activar add-on WhatsApp (backend ya listo)
-5. Exportación Contable (más simple de los add-ons)
+4. ✅ WhatsApp — Bug 2 resuelto, comingSoon removido. Falta: configurar env vars en Vercel + registrar webhook en Meta
+5. ✅ Exportación Contable — API `/api/reports/export` + botón en UI de reportes
 
 **P3 — Completar features existentes:**
 6. Audit log UI para plan EMPRESARIAL

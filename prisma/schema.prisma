@@ -137,6 +137,7 @@ model OrgAddon {
   addon          AddonType
   active         Boolean   @default(true)
   stripeItemId   String?
+  phoneNumberId  String?   // WhatsApp: Meta phone_number_id para routing multi-tenant
   createdAt      DateTime  @default(now())
 
   organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)

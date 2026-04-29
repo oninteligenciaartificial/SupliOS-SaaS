@@ -57,21 +57,23 @@ export async function POST(request: Request) {
         const from = m.from as string;
         const waId = m.id as string;
 
-        // Find org by WA phone number ID
-        const org = await prisma.organization.findFirst({
-          where: {
-            addons: { some: { addon: "WHATSAPP", active: true } },
-          },
-          select: { id: true },
-        });
+        // Find org by phoneNumberId stored in OrgAddon — correct multi-tenant routing
+        const addonRecord = phoneNumberId
+          ? await prisma.orgAddon.findFirst({
+              where: { addon: "WHATSAPP", active: true, phoneNumberId },
+              select: { organizationId: true },
+            })
+          : null;
 
-        if (!org) continue;
+        if (!addonRecord) continue;
+
+        const orgId = addonRecord.organizationId;
 
         // Upsert conversation — track 24h window
         const twentyFourHoursAgo = new Date(Date.now() - 24 * 60 * 60 * 1000);
         const existing = await prisma.waConversation.findFirst({
           where: {
-            organizationId: org.id,
+            organizationId: orgId,
             phone: from,
             openedAt: { gte: twentyFourHoursAgo },
             closedAt: null,
@@ -86,7 +88,7 @@ export async function POST(request: Request) {
         } else {
           await prisma.waConversation.create({
             data: {
-              organizationId: org.id,
+              organizationId: orgId,
               phone: from,
               waId,
               type: "user_initiated",
@@ -94,8 +96,6 @@ export async function POST(request: Request) {
             },
           });
         }
-
-        void phoneNumberId; // used for multi-phone routing in future
       }
     }
   }
