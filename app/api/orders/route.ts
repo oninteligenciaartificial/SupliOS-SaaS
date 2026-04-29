@@ -81,31 +81,30 @@ export async function POST(request: Request) {
   const { customerName, customerId, paymentMethod, shippingAddress, notes, items } = result.data;
   const total = items.reduce((sum: number, i: { quantity: number; unitPrice: number }) => sum + i.quantity * i.unitPrice, 0);
 
-  const order = await prisma.order.create({
-    data: {
-      organizationId: profile.organizationId,
-      customerName: customerName.trim(),
-      customerId: customerId ?? null,
-      staffId: staffProfile?.id ?? null,
-      paymentMethod,
-      shippingAddress: shippingAddress ?? null,
-      notes: notes ?? null,
-      total,
-      items: {
-        create: items.map((i): Prisma.OrderItemUncheckedCreateWithoutOrderInput => ({
-          productId: i.productId,
-          quantity: i.quantity,
-          unitPrice: i.unitPrice,
-          variantId: i.variantId ?? null,
-          variantSnapshot: (i.variantSnapshot ?? Prisma.DbNull) as Prisma.InputJsonValue | typeof Prisma.DbNull,
-        })),
+  const [order] = await prisma.$transaction([
+    prisma.order.create({
+      data: {
+        organizationId: profile.organizationId,
+        customerName: customerName.trim(),
+        customerId: customerId ?? null,
+        staffId: staffProfile?.id ?? null,
+        paymentMethod,
+        shippingAddress: shippingAddress ?? null,
+        notes: notes ?? null,
+        total,
+        items: {
+          create: items.map((i): Prisma.OrderItemUncheckedCreateWithoutOrderInput => ({
+            productId: i.productId,
+            quantity: i.quantity,
+            unitPrice: i.unitPrice,
+            variantId: i.variantId ?? null,
+            variantSnapshot: (i.variantSnapshot ?? Prisma.DbNull) as Prisma.InputJsonValue | typeof Prisma.DbNull,
+          })),
+        },
       },
-    },
-    include: { items: { include: { product: true } }, customer: true },
-  });
-
-  await Promise.all(
-    items.map((i) =>
+      include: { items: { include: { product: true } }, customer: true },
+    }),
+    ...items.map((i) =>
       i.variantId
         ? prisma.productVariant.update({
             where: { id: i.variantId },
@@ -115,8 +114,8 @@ export async function POST(request: Request) {
             where: { id: i.productId },
             data: { stock: { decrement: i.quantity } },
           })
-    )
-  );
+    ),
+  ]);
 
   const org = await prisma.organization.findUnique({ where: { id: profile.organizationId }, select: { name: true } });
   const orgName = org?.name ?? "Tu Tienda";

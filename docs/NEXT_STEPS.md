@@ -128,7 +128,7 @@ CSV/Excel con formato para contadores bolivianos. El más simple de implementar 
 - [ ] **Tests** — Cero cobertura. Prioridad: `POST /api/orders` (stock decrement), plan limit checks.
 - [ ] **Cron jobs en Vercel** — Confirmar que los 4 jobs están en `vercel.json` con schedules.
 - [ ] **Rate limiting** — Sin rate limiting. Urgente en `/api/registro` (endpoint público sin auth).
-- [ ] **Transacciones atómicas en órdenes** — El create order + stock decrement no son atómicos. Si el decrement falla, la orden queda registrada con stock incorrecto. Envolver en `prisma.$transaction()`.
+- [x] **Transacciones atómicas en órdenes** — resuelto 2026-04-29. `prisma.$transaction([create, ...decrements])`.
 - [ ] **Error monitoring** — Sin Sentry. Múltiples `.catch(() => {})` en emails y audit logs son invisibles en producción.
 
 ---
@@ -138,7 +138,7 @@ CSV/Excel con formato para contadores bolivianos. El más simple de implementar 
 **P1 — Bugs que afectan datos:**
 1. ✅ Bug 1: stock restore en cancel para variantes — resuelto 2026-04-29
 2. ✅ Bug 3: stock entry para variantes — resuelto 2026-04-29
-3. Transacciones atómicas en POST /api/orders
+3. ✅ Transacciones atómicas en POST /api/orders — resuelto 2026-04-29
 
 **P2 — Activar revenue:**
 4. Activar add-on WhatsApp (backend ya listo)
