@@ -1,7 +1,15 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
-import { Search, Plus, Minus, Trash2, ShoppingCart, CheckCircle, X, Tag, ChevronUp } from "lucide-react";
+import { Search, Plus, Minus, Trash2, ShoppingCart, CheckCircle, X, Tag, ChevronUp, Layers } from "lucide-react";
+
+interface ProductVariant {
+  id: string;
+  attributes: Record<string, string>;
+  sku: string | null;
+  stock: number;
+  price: string | null;
+}
 
 interface Product {
   id: string;
@@ -11,6 +19,8 @@ interface Product {
   minStock: number;
   sku: string | null;
   category: { name: string } | null;
+  hasVariants: boolean;
+  variants?: ProductVariant[];
 }
 
 interface Discount {
@@ -25,10 +35,17 @@ interface Discount {
 interface CartItem {
   product: Product;
   qty: number;
+  variantId?: string;
+  variantLabel?: string;
+  effectivePrice: number;
 }
 
 function fmt(n: number) {
   return n.toLocaleString("es-MX", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+}
+
+function cartKey(item: CartItem) {
+  return item.variantId ? `${item.product.id}__${item.variantId}` : item.product.id;
 }
 
 export default function POSPage() {
@@ -46,6 +63,7 @@ export default function POSPage() {
   const [selling, setSelling] = useState(false);
   const [success, setSuccess] = useState(false);
   const [cartOpen, setCartOpen] = useState(false);
+  const [variantTarget, setVariantTarget] = useState<Product | null>(null);
 
   const fetchData = useCallback(async () => {
     setLoading(true);
@@ -67,34 +85,56 @@ export default function POSPage() {
   });
 
   function addToCart(product: Product) {
+    if (product.hasVariants) {
+      setVariantTarget(product);
+      return;
+    }
     if (product.stock <= 0) return;
     setCart((prev) => {
-      const existing = prev.find((i) => i.product.id === product.id);
+      const existing = prev.find((i) => i.product.id === product.id && !i.variantId);
       if (existing) {
         if (existing.qty >= product.stock) return prev;
-        return prev.map((i) => i.product.id === product.id ? { ...i, qty: i.qty + 1 } : i);
+        return prev.map((i) => i.product.id === product.id && !i.variantId ? { ...i, qty: i.qty + 1 } : i);
       }
-      return [...prev, { product, qty: 1 }];
+      return [...prev, { product, qty: 1, effectivePrice: Number(product.price) }];
     });
   }
 
-  function updateQty(productId: string, delta: number) {
+  function addVariantToCart(product: Product, variant: ProductVariant) {
+    setVariantTarget(null);
+    if (variant.stock <= 0) return;
+    const effectivePrice = variant.price ? Number(variant.price) : Number(product.price);
+    const label = Object.entries(variant.attributes).map(([k, v]) => `${k}: ${v}`).join(" · ");
+    setCart((prev) => {
+      const existing = prev.find((i) => i.variantId === variant.id);
+      if (existing) {
+        if (existing.qty >= variant.stock) return prev;
+        return prev.map((i) => i.variantId === variant.id ? { ...i, qty: i.qty + 1 } : i);
+      }
+      return [...prev, { product, qty: 1, variantId: variant.id, variantLabel: label, effectivePrice }];
+    });
+  }
+
+  function updateQty(key: string, delta: number) {
     setCart((prev) =>
       prev.flatMap((i) => {
-        if (i.product.id !== productId) return [i];
+        if (cartKey(i) !== key) return [i];
+        const cap = i.variantId
+          ? (i.product.variants?.find((v) => v.id === i.variantId)?.stock ?? Infinity)
+          : i.product.stock;
         const newQty = i.qty + delta;
         if (newQty <= 0) return [];
-        if (newQty > i.product.stock) return [i];
+        if (newQty > cap) return [i];
         return [{ ...i, qty: newQty }];
       })
     );
   }
 
-  function removeFromCart(productId: string) {
-    setCart((prev) => prev.filter((i) => i.product.id !== productId));
+  function removeFromCart(key: string) {
+    setCart((prev) => prev.filter((i) => cartKey(i) !== key));
   }
 
-  const subtotal = cart.reduce((s, i) => s + i.qty * Number(i.product.price), 0);
+  const subtotal = cart.reduce((s, i) => s + i.qty * i.effectivePrice, 0);
   const totalItems = cart.reduce((s, i) => s + i.qty, 0);
 
   function applyDiscount() {
@@ -132,7 +172,14 @@ export default function POSPage() {
         items: cart.map((i) => ({
           productId: i.product.id,
           quantity: i.qty,
-          unitPrice: Number(i.product.price),
+          unitPrice: i.effectivePrice,
+          ...(i.variantId ? {
+            variantId: i.variantId,
+            variantSnapshot: {
+              label: i.variantLabel,
+              attributes: i.product.variants?.find((v) => v.id === i.variantId)?.attributes,
+            },
+          } : {}),
         })),
         notes: appliedDiscount ? `Descuento: ${appliedDiscount.code} (-$${fmt(discountAmount)})` : undefined,
       }),
@@ -150,11 +197,18 @@ export default function POSPage() {
     }
   }
 
-  const inCart = (id: string) => cart.find((i) => i.product.id === id);
+  // Returns qty in cart for a simple product (no variant)
+  function inCart(id: string) {
+    return cart.find((i) => i.product.id === id && !i.variantId);
+  }
+
+  // Total qty in cart for a product (across all variants)
+  function inCartTotal(id: string) {
+    return cart.filter((i) => i.product.id === id).reduce((s, i) => s + i.qty, 0);
+  }
 
   const CartContent = (
     <div className="flex flex-col h-full">
-      {/* Cart items */}
       <div className="flex-1 overflow-y-auto p-4 space-y-2">
         {cart.length === 0 ? (
           <div className="py-12 text-center text-brand-muted">
@@ -162,31 +216,36 @@ export default function POSPage() {
             <p className="text-sm">Selecciona productos</p>
           </div>
         ) : (
-          cart.map((item) => (
-            <div key={item.product.id} className="flex items-center gap-3 p-3 rounded-xl bg-white/5">
-              <div className="flex-1 min-w-0">
-                <div className="text-sm font-medium text-white truncate">{item.product.name}</div>
-                <div className="text-xs text-brand-muted">${fmt(Number(item.product.price))} c/u</div>
-              </div>
-              <div className="flex items-center gap-1.5">
-                <button onClick={() => updateQty(item.product.id, -1)} className="w-7 h-7 rounded-full bg-white/10 text-white flex items-center justify-center hover:bg-white/20 transition-colors">
-                  <Minus size={12} />
+          cart.map((item) => {
+            const key = cartKey(item);
+            return (
+              <div key={key} className="flex items-center gap-3 p-3 rounded-xl bg-white/5">
+                <div className="flex-1 min-w-0">
+                  <div className="text-sm font-medium text-white truncate">{item.product.name}</div>
+                  {item.variantLabel && (
+                    <div className="text-xs text-blue-400 truncate">{item.variantLabel}</div>
+                  )}
+                  <div className="text-xs text-brand-muted">${fmt(item.effectivePrice)} c/u</div>
+                </div>
+                <div className="flex items-center gap-1.5">
+                  <button onClick={() => updateQty(key, -1)} className="w-7 h-7 rounded-full bg-white/10 text-white flex items-center justify-center hover:bg-white/20 transition-colors">
+                    <Minus size={12} />
+                  </button>
+                  <span className="w-6 text-center text-sm font-bold text-white">{item.qty}</span>
+                  <button onClick={() => updateQty(key, 1)} className="w-7 h-7 rounded-full bg-white/10 text-white flex items-center justify-center hover:bg-white/20 transition-colors">
+                    <Plus size={12} />
+                  </button>
+                </div>
+                <div className="text-sm font-bold text-white w-16 text-right">${fmt(item.qty * item.effectivePrice)}</div>
+                <button onClick={() => removeFromCart(key)} className="text-brand-muted hover:text-red-400 transition-colors ml-1">
+                  <Trash2 size={13} />
                 </button>
-                <span className="w-6 text-center text-sm font-bold text-white">{item.qty}</span>
-                <button onClick={() => updateQty(item.product.id, 1)} className="w-7 h-7 rounded-full bg-white/10 text-white flex items-center justify-center hover:bg-white/20 transition-colors">
-                  <Plus size={12} />
-                </button>
               </div>
-              <div className="text-sm font-bold text-white w-16 text-right">${fmt(item.qty * Number(item.product.price))}</div>
-              <button onClick={() => removeFromCart(item.product.id)} className="text-brand-muted hover:text-red-400 transition-colors ml-1">
-                <Trash2 size={13} />
-              </button>
-            </div>
-          ))
+            );
+          })
         )}
       </div>
 
-      {/* Checkout */}
       <div className="p-4 border-t border-white/5 space-y-3">
         <input
           value={customerName}
@@ -257,9 +316,60 @@ export default function POSPage() {
 
   return (
     <>
-      {/* ── DESKTOP: side-by-side ── */}
+      {/* Variant selector modal */}
+      {variantTarget && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4">
+          <div className="glass-panel w-full max-w-sm rounded-2xl p-6 space-y-4">
+            <div className="flex justify-between items-center">
+              <div>
+                <h3 className="font-bold text-white">{variantTarget.name}</h3>
+                <p className="text-xs text-brand-muted mt-0.5">Elige una variante</p>
+              </div>
+              <button onClick={() => setVariantTarget(null)} className="text-brand-muted hover:text-white transition-colors">
+                <X size={18} />
+              </button>
+            </div>
+            <div className="space-y-2 max-h-72 overflow-y-auto">
+              {(variantTarget.variants ?? []).length === 0 ? (
+                <p className="text-center text-brand-muted text-sm py-4">Sin variantes configuradas. Agrégalas en Inventario.</p>
+              ) : (
+                <>
+                  {(variantTarget.variants ?? []).filter((v) => v.stock > 0).map((v) => {
+                    const label = Object.entries(v.attributes).map(([k, val]) => `${k}: ${val}`).join(" · ");
+                    const price = v.price ? Number(v.price) : Number(variantTarget.price);
+                    const qtyInCart = cart.find((i) => i.variantId === v.id)?.qty ?? 0;
+                    return (
+                      <button
+                        key={v.id}
+                        onClick={() => addVariantToCart(variantTarget, v)}
+                        className="w-full flex justify-between items-center px-4 py-3 rounded-xl bg-white/5 hover:bg-white/10 transition-colors text-left"
+                      >
+                        <div>
+                          <span className="text-sm text-white">{label}</span>
+                          <span className="block text-xs text-brand-muted">Stock: {v.stock}{qtyInCart > 0 && ` · En carrito: ${qtyInCart}`}</span>
+                        </div>
+                        <span className="text-sm font-bold text-brand-kinetic-orange">${fmt(price)}</span>
+                      </button>
+                    );
+                  })}
+                  {(variantTarget.variants ?? []).filter((v) => v.stock <= 0).map((v) => {
+                    const label = Object.entries(v.attributes).map(([k, val]) => `${k}: ${val}`).join(" · ");
+                    return (
+                      <div key={v.id} className="flex justify-between items-center px-4 py-3 rounded-xl bg-white/[0.02] opacity-40">
+                        <span className="text-sm text-brand-muted line-through">{label}</span>
+                        <span className="text-xs text-red-400">Sin stock</span>
+                      </div>
+                    );
+                  })}
+                </>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* DESKTOP */}
       <div className="hidden lg:flex h-[calc(100vh-0px)]">
-        {/* Products */}
         <div className="flex-1 flex flex-col overflow-hidden">
           <div className="p-5 border-b border-white/5 space-y-3 flex-shrink-0">
             <div className="relative">
@@ -284,18 +394,27 @@ export default function POSPage() {
             ) : (
               <div className="grid grid-cols-2 xl:grid-cols-3 gap-3">
                 {filtered.map((p) => {
-                  const cartItem = inCart(p.id);
-                  const outOfStock = p.stock <= 0;
+                  const totalInCart = inCartTotal(p.id);
+                  const simpleItem = inCart(p.id);
+                  const outOfStock = p.hasVariants
+                    ? (p.variants ?? []).every((v) => v.stock <= 0)
+                    : p.stock <= 0;
+                  const inCartQty = p.hasVariants ? totalInCart : simpleItem?.qty;
                   return (
-                    <button key={p.id} onClick={() => addToCart(p)} disabled={outOfStock}
-                      className={`relative text-left p-4 rounded-2xl border transition-all ${outOfStock ? "border-white/5 bg-white/[0.02] opacity-50 cursor-not-allowed" : cartItem ? "border-brand-kinetic-orange/50 bg-brand-kinetic-orange/10 shadow-[0_0_20px_rgba(255,107,0,0.15)]" : "border-white/10 bg-white/[0.03] hover:border-brand-kinetic-orange/30 hover:bg-white/[0.06]"}`}
+                    <button key={p.id} onClick={() => addToCart(p)} disabled={outOfStock && !p.hasVariants}
+                      className={`relative text-left p-4 rounded-2xl border transition-all ${outOfStock && !p.hasVariants ? "border-white/5 bg-white/[0.02] opacity-50 cursor-not-allowed" : inCartQty ? "border-brand-kinetic-orange/50 bg-brand-kinetic-orange/10 shadow-[0_0_20px_rgba(255,107,0,0.15)]" : "border-white/10 bg-white/[0.03] hover:border-brand-kinetic-orange/30 hover:bg-white/[0.06]"}`}
                     >
-                      {cartItem && <div className="absolute top-3 right-3 w-6 h-6 rounded-full bg-brand-kinetic-orange text-black text-xs font-bold flex items-center justify-center">{cartItem.qty}</div>}
-                      <div className="font-bold text-white text-sm leading-tight mb-1 pr-8">{p.name}</div>
+                      {inCartQty ? <div className="absolute top-3 right-3 w-6 h-6 rounded-full bg-brand-kinetic-orange text-black text-xs font-bold flex items-center justify-center">{inCartQty}</div> : null}
+                      <div className="font-bold text-white text-sm leading-tight mb-1 pr-8 flex items-center gap-1.5">
+                        {p.name}
+                        {p.hasVariants && <Layers size={12} className="text-blue-400 flex-shrink-0" />}
+                      </div>
                       {p.category && <div className="text-xs text-brand-muted mb-2">{p.category.name}</div>}
                       <div className="text-brand-kinetic-orange font-bold text-lg">${fmt(Number(p.price))}</div>
-                      <div className={`text-xs mt-1 ${outOfStock ? "text-red-400" : p.stock <= p.minStock ? "text-yellow-400" : "text-brand-muted"}`}>
-                        {outOfStock ? "Sin stock" : `Stock: ${p.stock}`}
+                      <div className={`text-xs mt-1 ${outOfStock ? "text-red-400" : p.hasVariants ? "text-blue-400" : p.stock <= p.minStock ? "text-yellow-400" : "text-brand-muted"}`}>
+                        {p.hasVariants
+                          ? `${(p.variants ?? []).filter((v) => v.stock > 0).length} variantes disponibles`
+                          : outOfStock ? "Sin stock" : `Stock: ${p.stock}`}
                       </div>
                     </button>
                   );
@@ -306,7 +425,6 @@ export default function POSPage() {
           </div>
         </div>
 
-        {/* Desktop cart */}
         <div className="w-80 xl:w-96 border-l border-white/5 bg-brand-surface-lowest/60 flex flex-col flex-shrink-0">
           <div className="p-5 border-b border-white/5 flex items-center gap-2">
             <ShoppingCart size={18} className="text-brand-kinetic-orange" />
@@ -317,9 +435,8 @@ export default function POSPage() {
         </div>
       </div>
 
-      {/* ── MOBILE: full screen products + bottom sheet cart ── */}
+      {/* MOBILE */}
       <div className="lg:hidden flex flex-col h-[calc(100dvh-64px)]">
-        {/* Search + filters */}
         <div className="px-4 pt-3 pb-3 border-b border-white/5 space-y-2 flex-shrink-0">
           <div className="relative">
             <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-brand-muted" />
@@ -338,25 +455,33 @@ export default function POSPage() {
           </div>
         </div>
 
-        {/* Product grid */}
         <div className="flex-1 overflow-y-auto p-3 pb-24">
           {loading ? (
             <div className="py-16 text-center text-brand-muted text-sm">Cargando...</div>
           ) : (
             <div className="grid grid-cols-2 gap-2.5">
               {filtered.map((p) => {
-                const cartItem = inCart(p.id);
-                const outOfStock = p.stock <= 0;
+                const totalInCart = inCartTotal(p.id);
+                const simpleItem = inCart(p.id);
+                const outOfStock = p.hasVariants
+                  ? (p.variants ?? []).every((v) => v.stock <= 0)
+                  : p.stock <= 0;
+                const inCartQty = p.hasVariants ? totalInCart : simpleItem?.qty;
                 return (
-                  <button key={p.id} onClick={() => addToCart(p)} disabled={outOfStock}
-                    className={`relative text-left p-3.5 rounded-2xl border transition-all active:scale-95 ${outOfStock ? "border-white/5 bg-white/[0.02] opacity-50 cursor-not-allowed" : cartItem ? "border-brand-kinetic-orange/50 bg-brand-kinetic-orange/10" : "border-white/10 bg-white/[0.03]"}`}
+                  <button key={p.id} onClick={() => addToCart(p)} disabled={outOfStock && !p.hasVariants}
+                    className={`relative text-left p-3.5 rounded-2xl border transition-all active:scale-95 ${outOfStock && !p.hasVariants ? "border-white/5 bg-white/[0.02] opacity-50 cursor-not-allowed" : inCartQty ? "border-brand-kinetic-orange/50 bg-brand-kinetic-orange/10" : "border-white/10 bg-white/[0.03]"}`}
                   >
-                    {cartItem && <div className="absolute top-2.5 right-2.5 w-5 h-5 rounded-full bg-brand-kinetic-orange text-black text-xs font-bold flex items-center justify-center">{cartItem.qty}</div>}
-                    <div className="font-semibold text-white text-sm leading-tight mb-0.5 pr-6 line-clamp-2">{p.name}</div>
+                    {inCartQty ? <div className="absolute top-2.5 right-2.5 w-5 h-5 rounded-full bg-brand-kinetic-orange text-black text-xs font-bold flex items-center justify-center">{inCartQty}</div> : null}
+                    <div className="font-semibold text-white text-sm leading-tight mb-0.5 pr-6 line-clamp-2 flex items-center gap-1">
+                      {p.name}
+                      {p.hasVariants && <Layers size={11} className="text-blue-400 flex-shrink-0" />}
+                    </div>
                     {p.category && <div className="text-xs text-brand-muted mb-1.5">{p.category.name}</div>}
                     <div className="text-brand-kinetic-orange font-bold">${fmt(Number(p.price))}</div>
-                    <div className={`text-xs mt-0.5 ${outOfStock ? "text-red-400" : p.stock <= p.minStock ? "text-yellow-400" : "text-brand-muted"}`}>
-                      {outOfStock ? "Sin stock" : `${p.stock} disponibles`}
+                    <div className={`text-xs mt-0.5 ${outOfStock ? "text-red-400" : p.hasVariants ? "text-blue-400" : p.stock <= p.minStock ? "text-yellow-400" : "text-brand-muted"}`}>
+                      {p.hasVariants
+                        ? `${(p.variants ?? []).filter((v) => v.stock > 0).length} variantes`
+                        : outOfStock ? "Sin stock" : `${p.stock} disponibles`}
                     </div>
                   </button>
                 );
@@ -366,7 +491,6 @@ export default function POSPage() {
           )}
         </div>
 
-        {/* Floating cart button */}
         {cart.length > 0 && !cartOpen && (
           <div className="fixed bottom-0 left-0 right-0 p-4 z-30">
             <button
@@ -383,7 +507,6 @@ export default function POSPage() {
           </div>
         )}
 
-        {/* Mobile cart bottom sheet */}
         {cartOpen && (
           <>
             <div className="fixed inset-0 z-40 bg-black/60" onClick={() => setCartOpen(false)} />
