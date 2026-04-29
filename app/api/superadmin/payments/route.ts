@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { prisma } from "@/lib/prisma";
 import { sendPlanActivatedEmail } from "@/lib/email";
+import { reportAsyncError } from "@/lib/monitoring";
 import { z } from "zod";
 
 async function getSuperAdmin() {
@@ -87,7 +88,12 @@ export async function PATCH(request: Request) {
           orgName: payReq.organization.name,
           plan: payReq.plan,
           expiresAt: newExpiry,
-        }).catch(() => {});
+        }).catch((error) => {
+          reportAsyncError("api.superadmin.payments.sendPlanActivatedEmail", error, {
+            organizationId: payReq.organizationId,
+            paymentRequestId: payReq.id,
+          });
+        });
       }
     }
   }

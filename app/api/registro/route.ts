@@ -2,6 +2,8 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { sendWelcomeEmail } from "@/lib/email";
 import { canUseFeature } from "@/lib/plans";
+import { consumeRateLimit, getRequestIp } from "@/lib/rate-limit";
+import { reportAsyncError } from "@/lib/monitoring";
 import { z } from "zod";
 
 const schema = z.object({
@@ -13,6 +15,29 @@ const schema = z.object({
 });
 
 export async function POST(request: Request) {
+  const ip = getRequestIp(request.headers);
+  const rateLimit = consumeRateLimit(`registro:${ip}`, {
+    windowMs: 60_000,
+    max: 10,
+  });
+
+  if (!rateLimit.allowed) {
+    return NextResponse.json(
+      {
+        error: "Demasiadas solicitudes. Intenta nuevamente en unos minutos.",
+      },
+      {
+        status: 429,
+        headers: {
+          "Retry-After": String(Math.ceil((rateLimit.resetAt - Date.now()) / 1000)),
+          "X-RateLimit-Limit": "10",
+          "X-RateLimit-Remaining": "0",
+          "X-RateLimit-Reset": String(Math.floor(rateLimit.resetAt / 1000)),
+        },
+      }
+    );
+  }
+
   let body: unknown;
   try { body = await request.json(); }
   catch { return NextResponse.json({ error: "JSON invalido" }, { status: 400 }); }
@@ -45,7 +70,12 @@ export async function POST(request: Request) {
   });
 
   if (customer.email) {
-    sendWelcomeEmail({ to: customer.email, customerName: customer.name, orgName: org.name }).catch(() => {});
+    sendWelcomeEmail({ to: customer.email, customerName: customer.name, orgName: org.name }).catch((error) => {
+      reportAsyncError("api.registro.sendWelcomeEmail", error, {
+        customerId: customer.id,
+        organizationId: org.id,
+      });
+    });
   }
 
   return NextResponse.json({ ok: true, customerId: customer.id, orgName: org.name });

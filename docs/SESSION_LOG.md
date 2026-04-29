@@ -265,3 +265,99 @@ after: Record<string, unknown> | null;
 **Regla:** Para campos JSON de API en JSX, usar `Record<string, unknown> | null`. `null` es falsy → `&&` funciona. `unknown` no lo es.
 
 ---
+
+## 2026-04-29 (6)
+
+### Seguridad — Rate limiting en endpoint público `/api/registro`
+
+**Motivación:** endpoint público sin auth vulnerable a abuso/spam. Marcado como urgente en `NEXT_STEPS.md`.
+
+**Cambios:**
+- Nuevo util: `lib/rate-limit.ts`
+  - `getRequestIp(headers)` usando `x-forwarded-for` y fallback `x-real-ip`
+  - `consumeRateLimit(key, { windowMs, max })` con bucket en memoria
+- `app/api/registro/route.ts`
+  - Rate limit antes de parsear body
+  - Límite: **10 requests / 60s por IP**
+  - Respuesta de bloqueo: `429` + headers `Retry-After`, `X-RateLimit-Limit`, `X-RateLimit-Remaining`, `X-RateLimit-Reset`
+
+**Notas técnicas:**
+- Implementación in-memory (rápida, cero dependencia). En despliegues serverless distribuidos, el límite es best-effort por instancia.
+- Para enforcement global por región/instancia, migrar a store centralizado (Redis/Upstash).
+
+**Documentación actualizada:**
+- `docs/NEXT_STEPS.md`: `Rate limiting` marcado como resuelto.
+- `docs/NEXT_STEPS.md`: `Cron jobs en Vercel` marcado como confirmado (4 jobs presentes en `vercel.json`).
+
+---
+
+## 2026-04-29 (7)
+
+### Documentación — sincronización de contexto
+
+`docs/00-PROJECT-CONTEXT.md` tenía estado antiguo en 4 puntos. Se alineó con el estado técnico actual:
+
+- Add-ons: WhatsApp + Exportación Contable implementados; pendientes SIAT/QR/E-commerce.
+- WhatsApp: backend listo, falta configuración externa.
+- Loyalty points: canje en POS implementado.
+- Audit log: backend + UI `/audit` ya disponibles.
+
+---
+
+## 2026-04-29 (8)
+
+### Observabilidad — eliminación de errores silenciosos
+
+**Problema:** había múltiples `.catch(() => {})` en rutas API y cron jobs, ocultando errores en producción.
+
+**Cambios:**
+- Nuevo util `lib/monitoring.ts` con `reportAsyncError(scope, error, context)`.
+  - Siempre registra por consola (`console.error`) con `scope` y contexto.
+  - Intenta capturar en Sentry vía `@sentry/nextjs` si está disponible.
+  - Si Sentry no está instalado, fallback no bloqueante con warning único.
+- Reemplazo de catches silenciosos en:
+  - `app/api/registro/route.ts`
+  - `lib/audit.ts`
+  - `app/api/orders/route.ts`
+  - `app/api/orders/[id]/route.ts`
+  - `app/api/superadmin/payments/route.ts`
+  - `app/api/cron/plan-expiry/route.ts`
+  - `app/api/cron/inactive-customers/route.ts`
+  - `app/api/cron/birthday/route.ts`
+  - `app/api/cron/expiry/route.ts`
+
+**Validación:**
+- `npx eslint` sobre archivos modificados: OK.
+
+**Estado:**
+- Error monitoring fase 1 completada (visibilidad inmediata de fallos async).
+- Siguiente mejora opcional: instalar/configurar `@sentry/nextjs` para envío centralizado.
+
+---
+
+## 2026-04-29 (9)
+
+### Testing — bootstrap de suite unitaria
+
+**Objetivo:** empezar cobertura automatizada sin depender de DB/Supabase.
+
+**Cambios:**
+- `devDependency`: `vitest`
+- Scripts en `package.json`:
+  - `test` → `vitest run`
+  - `test:watch` → `vitest`
+- Config: `vitest.config.ts`
+  - `environment: "node"`
+  - alias `@` → raíz del repo
+  - include `tests/**/*.test.ts`
+- Tests iniciales: `tests/rate-limit.test.ts`
+  - `getRequestIp` (prioridad `x-forwarded-for`, fallback `x-real-ip`, fallback final `unknown`)
+  - `consumeRateLimit` (umbral y reset de ventana)
+
+**Ejecución:**
+- `npm test` → **1 archivo, 5 tests, todos green**
+
+**Próximo test target:**
+- `POST /api/orders` (decremento stock producto/variante, canje puntos, permisos y errores de validación).
+
+---

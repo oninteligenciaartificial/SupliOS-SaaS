@@ -1,5 +1,6 @@
 import { prisma } from "@/lib/prisma";
 import { isPlanAtLeast, type PlanType } from "@/lib/plans";
+import { reportAsyncError } from "@/lib/monitoring";
 
 interface AuditParams {
   orgId: string;
@@ -28,5 +29,13 @@ export async function logAudit(params: AuditParams): Promise<void> {
       after: params.after ? JSON.parse(JSON.stringify(params.after)) : undefined,
       ip: params.ip,
     },
-  }).catch(() => {}); // fire-and-forget, non-blocking
+  }).catch((error) => {
+    reportAsyncError("audit.logAudit.create", error, {
+      organizationId: params.orgId,
+      userId: params.userId,
+      entityType: params.entityType,
+      entityId: params.entityId,
+      action: params.action,
+    });
+  }); // fire-and-forget, non-blocking
 }

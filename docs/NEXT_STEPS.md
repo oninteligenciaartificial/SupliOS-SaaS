@@ -113,11 +113,11 @@ Storefront público en `/{slug}/tienda`. La DB ya soporta productos con variante
 
 ## Infraestructura
 
-- [ ] **Tests** — Cero cobertura. Prioridad: `POST /api/orders` (stock decrement), plan limit checks.
-- [ ] **Cron jobs en Vercel** — Confirmar que los 4 jobs están en `vercel.json` con schedules.
-- [ ] **Rate limiting** — Sin rate limiting. Urgente en `/api/registro` (endpoint público sin auth).
+- [ ] **Tests** — base de testing agregada con Vitest + primeros unit tests (`tests/rate-limit.test.ts`, 5 tests). Siguiente prioridad: `POST /api/orders` (stock decrement), plan limit checks.
+- [x] **Cron jobs en Vercel** — confirmado en `vercel.json` (`birthday`, `expiry`, `inactive-customers`, `plan-expiry`).
+- [x] **Rate limiting** — aplicado en `POST /api/registro` (ventana 60s, máx 10 requests por IP, respuesta `429` con headers de límite).
 - [x] **Transacciones atómicas en órdenes** — resuelto 2026-04-29. `prisma.$transaction([create, ...decrements])`.
-- [ ] **Error monitoring** — Sin Sentry. Múltiples `.catch(() => {})` en emails y audit logs son invisibles en producción.
+- [x] **Error monitoring (fase 1)** — reemplazados `.catch(() => {})` por `reportAsyncError()` en rutas críticas (orders, cron, registro, superadmin, audit). Fallback a `console.error` + captura Sentry automática si `@sentry/nextjs` está instalado.
 
 ---
 

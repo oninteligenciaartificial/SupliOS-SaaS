@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { sendExpiryAlert } from "@/lib/email";
+import { reportAsyncError } from "@/lib/monitoring";
 
 export async function GET(request: Request) {
   if (request.headers.get("Authorization") !== `Bearer ${process.env.CRON_SECRET}`) {
@@ -54,7 +55,13 @@ export async function GET(request: Request) {
     }));
 
     for (const email of adminEmails) {
-      await sendExpiryAlert({ to: email, orgName, products: alertProducts }).catch(() => {});
+      await sendExpiryAlert({ to: email, orgName, products: alertProducts }).catch((error) => {
+        reportAsyncError("cron.expiry.sendExpiryAlert", error, {
+          organizationId: orgId,
+          email,
+          productCount: alertProducts.length,
+        });
+      });
       sent++;
     }
   }

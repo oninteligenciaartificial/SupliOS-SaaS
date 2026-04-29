@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { sendPlanExpiryWarning, sendPlanExpired } from "@/lib/email";
 import { PLAN_META } from "@/lib/plans";
+import { reportAsyncError } from "@/lib/monitoring";
 
 export async function GET(request: Request) {
   if (request.headers.get("Authorization") !== `Bearer ${process.env.CRON_SECRET}`) {
@@ -36,7 +37,13 @@ export async function GET(request: Request) {
     for (const admin of admins) {
       const { data } = await supabaseAdmin.auth.admin.getUserById(admin.userId);
       if (data.user?.email) {
-        await sendPlanExpiryWarning({ to: data.user.email, orgName: org.name, daysLeft, planLabel }).catch(() => {});
+        await sendPlanExpiryWarning({ to: data.user.email, orgName: org.name, daysLeft, planLabel }).catch((error) => {
+          reportAsyncError("cron.planExpiry.sendPlanExpiryWarning", error, {
+            organizationId: org.id,
+            daysLeft,
+            email: data.user?.email,
+          });
+        });
         warnings++;
       }
     }
@@ -66,7 +73,12 @@ export async function GET(request: Request) {
     for (const admin of admins) {
       const { data } = await supabaseAdmin.auth.admin.getUserById(admin.userId);
       if (data.user?.email) {
-        await sendPlanExpired({ to: data.user.email, orgName: org.name, planLabel }).catch(() => {});
+        await sendPlanExpired({ to: data.user.email, orgName: org.name, planLabel }).catch((error) => {
+          reportAsyncError("cron.planExpiry.sendPlanExpired", error, {
+            organizationId: org.id,
+            email: data.user?.email,
+          });
+        });
         expired++;
       }
     }

@@ -5,6 +5,7 @@ import { prisma } from "@/lib/prisma";
 import { sendOrderStatusUpdate, sendLoyaltyPointsEmail } from "@/lib/email";
 import { hasPermission } from "@/lib/permissions";
 import { logAudit } from "@/lib/audit";
+import { reportAsyncError } from "@/lib/monitoring";
 import { z } from "zod";
 
 const updateSchema = z.object({
@@ -104,7 +105,12 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
         orgName,
         orderId: order.id,
         status: result.data.status,
-      }).catch(() => {});
+      }).catch((error) => {
+        reportAsyncError("api.ordersById.sendOrderStatusUpdate", error, {
+          orderId: order.id,
+          organizationId: profile.organizationId,
+        });
+      });
     }
 
     // Loyalty points on delivery — always accumulate, email only if customer has one
@@ -123,7 +129,13 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
           orgName,
           pointsEarned,
           totalPoints: updatedCustomer.loyaltyPoints,
-        }).catch(() => {});
+        }).catch((error) => {
+          reportAsyncError("api.ordersById.sendLoyaltyPointsEmail", error, {
+            orderId: order.id,
+            customerId: order.customerId,
+            organizationId: profile.organizationId,
+          });
+        });
       }
     }
   }

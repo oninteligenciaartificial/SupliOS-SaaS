@@ -8,6 +8,7 @@ import { hasPermission } from "@/lib/permissions";
 import { z } from "zod";
 import { Prisma } from "@prisma/client";
 import { logAudit } from "@/lib/audit";
+import { reportAsyncError } from "@/lib/monitoring";
 
 const createSchema = z.object({
   customerName: z.string().min(1),
@@ -151,7 +152,12 @@ export async function POST(request: Request) {
       items: orderItems,
       total: Number(order.total),
       paymentMethod,
-    }).catch(() => {});
+    }).catch((error) => {
+      reportAsyncError("api.orders.sendOrderConfirmation", error, {
+        orderId: order.id,
+        organizationId: profile.organizationId,
+      });
+    });
   }
 
   // New order alert to admin
@@ -173,7 +179,13 @@ export async function POST(request: Request) {
         total: Number(order.total),
         items: orderItems,
         paymentMethod,
-      }).catch(() => {});
+      }).catch((error) => {
+        reportAsyncError("api.orders.sendNewOrderAlert", error, {
+          orderId: order.id,
+          organizationId: profile.organizationId,
+          email,
+        });
+      });
     }
   }
 

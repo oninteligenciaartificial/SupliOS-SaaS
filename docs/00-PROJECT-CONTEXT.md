@@ -69,10 +69,10 @@ export async function GET(request: Request) {
 ## Estado actual (2026-04-29)
 
 - Sistema de variantes por tipo de negocio: **implementado** (5 build fixes aplicados 2026-04-28/29)
-- Add-ons: todos en `comingSoon: true` — UI visible pero no funcionales
-- WhatsApp: infraestructura lista, sin activar
-- Loyalty points: se acumulan, no hay canje
-- Audit log: modelo existe, sin página UI
+- Add-ons: WhatsApp y Exportación Contable ya implementados; SIAT/QR Bolivia/E-commerce siguen pendientes
+- WhatsApp: backend listo y sin `comingSoon`; falta configuración externa en Vercel/Meta
+- Loyalty points: acumulación y canje en POS implementados
+- Audit log: backend + UI `/audit` implementados (plan EMPRESARIAL)
 
 ## Documentación completa
 

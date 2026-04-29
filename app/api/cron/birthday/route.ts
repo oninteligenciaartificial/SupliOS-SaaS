@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { sendBirthdayEmail, sendPlainNotification } from "@/lib/email";
+import { reportAsyncError } from "@/lib/monitoring";
 
 export async function GET(request: Request) {
   if (request.headers.get("Authorization") !== `Bearer ${process.env.CRON_SECRET}`) {
@@ -53,7 +54,13 @@ export async function GET(request: Request) {
       orgName: customer.organization.name,
       discountCode: code,
       discountValue,
-    }).catch(() => {});
+    }).catch((error) => {
+      reportAsyncError("cron.birthday.sendBirthdayEmail", error, {
+        customerId: customer.id,
+        organizationId: customer.organizationId,
+        email: customer.email,
+      });
+    });
 
     sent++;
   }
@@ -75,7 +82,12 @@ export async function GET(request: Request) {
           to: data.user.email,
           subject: `${orgCustomers.length} cliente(s) cumplen anos hoy — ${orgName}`,
           text: `Hoy cumplen anos: ${orgCustomers.map(c => c.name).join(", ")}. Se les envio automaticamente su codigo de descuento.`,
-        }).catch(() => {});
+        }).catch((error) => {
+          reportAsyncError("cron.birthday.sendPlainNotification", error, {
+            organizationId: orgId,
+            email: data.user?.email,
+          });
+        });
       }
     }
   }

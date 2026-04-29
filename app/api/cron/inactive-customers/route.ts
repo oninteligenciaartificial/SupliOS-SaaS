@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { createAdminClient } from "@/lib/supabase/admin";
 import { sendInactiveCustomerEmail } from "@/lib/email";
+import { reportAsyncError } from "@/lib/monitoring";
 
 // Runs daily — sends reactivation emails to customers who haven't ordered in 30 days
 // Only for EMPRESARIAL orgs (email_advanced feature)
@@ -46,7 +46,13 @@ export async function GET(request: Request) {
       customerName: customer.name,
       orgName: customer.organization.name,
       daysSinceLastOrder: daysSince,
-    }).catch(() => {});
+    }).catch((error) => {
+      reportAsyncError("cron.inactiveCustomers.sendInactiveCustomerEmail", error, {
+        customerId: customer.id,
+        organizationId: customer.organizationId,
+        email: customer.email,
+      });
+    });
 
     sent++;
   }
