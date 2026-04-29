@@ -102,3 +102,30 @@ variantSnapshot: i.variantSnapshot ?? Prisma.DbNull,
 - Guardar valor → el objeto/valor directamente
 
 ---
+
+## 2026-04-28 (4)
+
+### Build error — `Record<string, unknown>` no asignable a `InputJsonValue`
+
+**Error:**
+```
+Type error: Type 'Record<string, unknown> | DbNull' is not assignable to
+type 'NullableJsonNullValueInput | InputJsonValue | undefined'.
+Type 'Record<string, unknown>' is missing the following properties from
+type 'readonly (InputJsonValue | null)[]': length, concat, join, slice...
+app/api/orders/route.ts:100
+variantSnapshot: i.variantSnapshot ?? Prisma.DbNull,
+```
+
+**Causa:** `Prisma.InputJsonValue` es un union estricto recursivo (string | number | boolean | InputJsonObject | readonly InputJsonValue[]). TS no acepta `Record<string, unknown>` como subtipo porque `unknown` es más amplio que `InputJsonValue`. Zod tipa el `variantSnapshot` como `Record<string, unknown>` (viene de `z.record(z.string(), z.unknown())`).
+
+**Fix aplicado:**
+```typescript
+variantSnapshot: (i.variantSnapshot ?? Prisma.DbNull) as Prisma.InputJsonValue | typeof Prisma.DbNull,
+```
+
+**Archivo:** `app/api/orders/route.ts` línea 100
+
+**Patrón:** Cuando Zod produce `Record<string, unknown>` y Prisma exige `InputJsonValue`, castear en el sitio de uso. Zod ya valida a runtime que el contenido es JSON-serializable.
+
+---

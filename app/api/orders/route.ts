@@ -97,7 +97,7 @@ export async function POST(request: Request) {
           quantity: i.quantity,
           unitPrice: i.unitPrice,
           variantId: i.variantId ?? null,
-          variantSnapshot: i.variantSnapshot ?? Prisma.DbNull,
+          variantSnapshot: (i.variantSnapshot ?? Prisma.DbNull) as Prisma.InputJsonValue | typeof Prisma.DbNull,
         })),
       },
     },
