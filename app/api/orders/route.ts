@@ -18,7 +18,7 @@ const createSchema = z.object({
     quantity: z.number().int().min(1),
     unitPrice: z.number().min(0),
     variantId: z.string().optional(),
-    variantSnapshot: z.record(z.unknown()).optional(),
+    variantSnapshot: z.record(z.string(), z.unknown()).optional(),
   })).min(1),
 });
 
