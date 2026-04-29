@@ -69,3 +69,36 @@ create: items.map((i): Prisma.OrderItemUncheckedCreateWithoutOrderInput => ({
 **Patrón general:** Cuando Prisma no puede inferir la variante Unchecked de un tipo, tipar explícitamente el callback del map con `Prisma.ModelUncheckedCreateWithout*Input`.
 
 ---
+
+## 2026-04-28 (3)
+
+### Build error — `null` no asignable a campo `Json?` en Prisma
+
+**Error:**
+```
+Type error: Type 'Record<string, unknown> | null' is not assignable to
+type 'NullableJsonNullValueInput | InputJsonValue | undefined'.
+Type 'null' is not assignable to type 'NullableJsonNullValueInput | InputJsonValue | undefined'.
+app/api/orders/route.ts:100
+variantSnapshot: i.variantSnapshot ?? null,
+```
+
+**Causa:** Prisma no acepta `null` directo para campos `Json?`. Requiere el sentinel `Prisma.DbNull` para expresar "guardar NULL en la columna". Esto es un quirk de Prisma para distinguir entre "no enviar el campo" (`undefined`) y "guardar explícitamente NULL" (`Prisma.DbNull`).
+
+**Fix aplicado:**
+```typescript
+// Cambiar import de type a valor para acceder a Prisma.DbNull
+import { Prisma } from "@prisma/client";  // era: import type { Prisma }
+
+// Usar Prisma.DbNull en lugar de null
+variantSnapshot: i.variantSnapshot ?? Prisma.DbNull,
+```
+
+**Archivo:** `app/api/orders/route.ts` líneas 9 y 100
+
+**Regla:** Para campos `Json?` en Prisma:
+- No enviar el campo → `undefined`
+- Guardar NULL en DB → `Prisma.DbNull`
+- Guardar valor → el objeto/valor directamente
+
+---

@@ -6,7 +6,7 @@ import { sendOrderConfirmation, sendNewOrderAlert } from "@/lib/email";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { hasPermission } from "@/lib/permissions";
 import { z } from "zod";
-import type { Prisma } from "@prisma/client";
+import { Prisma } from "@prisma/client";
 
 const createSchema = z.object({
   customerName: z.string().min(1),
@@ -97,7 +97,7 @@ export async function POST(request: Request) {
           quantity: i.quantity,
           unitPrice: i.unitPrice,
           variantId: i.variantId ?? null,
-          variantSnapshot: i.variantSnapshot ?? null,
+          variantSnapshot: i.variantSnapshot ?? Prisma.DbNull,
         })),
       },
     },
