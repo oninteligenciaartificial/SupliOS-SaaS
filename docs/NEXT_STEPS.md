@@ -74,7 +74,7 @@ if (!hasPermission(profile.role, "customers:update")) return NextResponse.json({
 |---|---|---|---|
 | Foto de producto | ✅ `Product.imageUrl` | ✅ `POST /api/products/upload-image` (Supabase Storage) | ✅ Upload con preview en inventario |
 | Barcode scanner en POS | ✅ `Product.barcode` | — | ✅ Input de escaneo en POS (busca por barcode o SKU, agrega al carrito) |
-| Filtro por sucursal en reportes | ✅ `Order.branchId` | ❌ | ❌ |
+| Filtro por sucursal en reportes | ✅ `Order.branchId` | ✅ param `branchId` en `/api/reports` | ✅ Selector en UI de reportes |
 
 ---
 
@@ -125,7 +125,7 @@ Storefront público en `/{slug}/tienda`. La DB ya soporta productos con variante
 6. ✅ Foto de producto — `POST /api/products/upload-image` + UI con preview en inventario (2026-04-29)
    ⚠ Requiere bucket `product-images` en Supabase Storage (crear en dashboard, visibility: public)
 7. ✅ Barcode scanner en POS — input de escaneo, busca por barcode o SKU, agrega al carrito directamente (2026-04-29)
-8. [ ] Filtro por sucursal en reportes
+8. ✅ Filtro por sucursal en reportes — param branchId en backend + selector de sucursal en UI (2026-04-29)
 9. [ ] Facturación SIAT Bolivia
 10. [ ] Pagos QR Bolivia
 11. [ ] E-commerce storefront

@@ -11,17 +11,24 @@ export async function GET(request: Request) {
   const to = searchParams.get("to") ? new Date(searchParams.get("to")!) : new Date();
   const toEnd = new Date(to);
   toEnd.setHours(23, 59, 59, 999);
+  const branchId = searchParams.get("branchId") ?? undefined;
 
   const orgId = profile.organizationId;
+  const orderWhere = {
+    organizationId: orgId,
+    createdAt: { gte: from, lte: toEnd },
+    status: { not: "CANCELADO" as const },
+    ...(branchId ? { branchId } : {}),
+  };
 
-  const [org, orders, topProductItems, stockAlerts, totalCustomers, staffSales, noMovementProducts, topCustomerRaw] = await Promise.all([
+  const [org, orders, topProductItems, stockAlerts, totalCustomers, staffSales, noMovementProducts, topCustomerRaw, branches] = await Promise.all([
     prisma.organization.findUnique({ where: { id: orgId }, select: { currency: true } }),
     prisma.order.findMany({
-      where: { organizationId: orgId, createdAt: { gte: from, lte: toEnd }, status: { not: "CANCELADO" } },
+      where: orderWhere,
       select: { total: true, createdAt: true, paymentMethod: true },
     }),
     prisma.orderItem.findMany({
-      where: { order: { organizationId: orgId, createdAt: { gte: from, lte: toEnd }, status: { not: "CANCELADO" } } },
+      where: { order: orderWhere },
       include: { product: { select: { name: true, cost: true, category: { select: { name: true } } } } },
     }),
     prisma.product.findMany({
@@ -31,7 +38,7 @@ export async function GET(request: Request) {
     prisma.customer.count({ where: { organizationId: orgId } }),
     prisma.order.groupBy({
       by: ["staffId"],
-      where: { organizationId: orgId, createdAt: { gte: from, lte: toEnd }, status: { not: "CANCELADO" }, staffId: { not: null } },
+      where: { ...orderWhere, staffId: { not: null } },
       _sum: { total: true },
       _count: { id: true },
     }),
@@ -47,12 +54,13 @@ export async function GET(request: Request) {
     }),
     prisma.order.groupBy({
       by: ["customerId"],
-      where: { organizationId: orgId, createdAt: { gte: from, lte: toEnd }, status: { not: "CANCELADO" }, customerId: { not: null } },
+      where: { ...orderWhere, customerId: { not: null } },
       _sum: { total: true },
       _count: { id: true },
       orderBy: { _sum: { total: "desc" } },
       take: 5,
     }),
+    prisma.branch.findMany({ where: { organizationId: orgId }, select: { id: true, name: true }, orderBy: { name: "asc" } }),
   ]);
 
   const currency = org?.currency ?? "MXN";
@@ -134,5 +142,6 @@ export async function GET(request: Request) {
     paymentBreakdown,
     salesByStaff,
     noMovement: noMovementProducts,
+    branches,
   });
 }

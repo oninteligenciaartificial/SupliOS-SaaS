@@ -17,6 +17,7 @@ interface ReportData {
   paymentBreakdown: Record<string, number>;
   salesByStaff: { staffId: string | null; staffName: string; total: number; orders: number }[];
   noMovement: { id: string; name: string; stock: number; updatedAt: string }[];
+  branches: { id: string; name: string }[];
 }
 
 const PRESETS = [
@@ -34,12 +35,15 @@ const PAYMENT_LABELS: Record<string, string> = { EFECTIVO: "Efectivo", TARJETA: 
 export default function ReportsPage() {
   const [from, setFrom] = useState(monthStart());
   const [to, setTo] = useState(today());
+  const [branchId, setBranchId] = useState("");
   const [data, setData] = useState<ReportData | null>(null);
   const [loading, setLoading] = useState(true);
 
-  async function fetchReport(f: string, t: string) {
+  async function fetchReport(f: string, t: string, bId?: string) {
     setLoading(true);
-    const res = await fetch(`/api/reports?from=${f}&to=${t}`);
+    const params = new URLSearchParams({ from: f, to: t });
+    if (bId) params.set("branchId", bId);
+    const res = await fetch(`/api/reports?${params.toString()}`);
     if (res.ok) setData(await res.json());
     setLoading(false);
   }
@@ -51,10 +55,10 @@ export default function ReportsPage() {
     const t = preset.to();
     setFrom(f);
     setTo(t);
-    fetchReport(f, t);
+    fetchReport(f, t, branchId || undefined);
   }
 
-  function handleApply() { fetchReport(from, to); }
+  function handleApply() { fetchReport(from, to, branchId || undefined); }
 
   const cur = data?.currency ?? "MXN";
   const fmt = (n: number) => formatMoney(n, cur);
@@ -142,7 +146,19 @@ export default function ReportsPage() {
             {p.label}
           </button>
         ))}
-        <div className="flex items-center gap-2 ml-auto">
+        <div className="flex items-center gap-2 ml-auto flex-wrap">
+          {data && data.branches.length > 0 && (
+            <select
+              value={branchId}
+              onChange={(e) => setBranchId(e.target.value)}
+              className="px-3 py-2 rounded-xl bg-white/5 border border-white/10 text-white text-sm focus:outline-none focus:border-brand-kinetic-orange transition-colors"
+            >
+              <option value="">Todas las sucursales</option>
+              {data.branches.map((b) => (
+                <option key={b.id} value={b.id}>{b.name}</option>
+              ))}
+            </select>
+          )}
           <input type="date" value={from} onChange={(e) => setFrom(e.target.value)} className="px-3 py-2 rounded-xl bg-white/5 border border-white/10 text-white text-sm focus:outline-none focus:border-brand-kinetic-orange transition-colors" />
           <span className="text-brand-muted text-sm">a</span>
           <input type="date" value={to} onChange={(e) => setTo(e.target.value)} className="px-3 py-2 rounded-xl bg-white/5 border border-white/10 text-white text-sm focus:outline-none focus:border-brand-kinetic-orange transition-colors" />
