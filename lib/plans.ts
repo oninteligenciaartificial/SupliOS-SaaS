@@ -49,6 +49,7 @@ export const FEATURE_PLAN: Record<string, PlanType> = {
   sucursales:       "EMPRESARIAL",
   roles_avanzados:  "EMPRESARIAL",
   audit_log:        "EMPRESARIAL",
+  facturacion_siat: "EMPRESARIAL",
 };
 
 export function canUseFeature(plan: PlanType, feature: string): boolean {

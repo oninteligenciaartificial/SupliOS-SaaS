@@ -70,6 +70,16 @@ model Organization {
   createdAt        DateTime  @default(now())
   updatedAt        DateTime  @updatedAt
 
+  // SIAT Bolivia — facturación electrónica
+  nitEmisor        String?   // NIT de la empresa (9 dígitos)
+  razonSocial      String?   // Nombre legal para facturas
+  siatCuis         String?   // Código mensual del SIN
+  siatCuisExpiresAt DateTime? // Fin de validez del CUIS
+  siatCufd         String?   // Código diario del SIN
+  siatCufdExpiresAt DateTime? // Fin de validez del CUFD
+  siatNroFactura   Int       @default(0) // Último número de factura emitido
+  siatCertExpiry   DateTime? // Vencimiento del certificado digital
+
   profiles        Profile[]
   categories      Category[]
   products        Product[]
@@ -83,6 +93,7 @@ model Organization {
   addons          OrgAddon[]
   waConversations WaConversation[]
   paymentRequests PaymentRequest[]
+  invoices        Invoice[]
 
   @@map("organizations")
 }
@@ -284,6 +295,7 @@ model Order {
   staff        Profile?     @relation("StaffOrders", fields: [staffId], references: [id], onDelete: SetNull)
   branch       Branch?      @relation(fields: [branchId], references: [id], onDelete: SetNull)
   items        OrderItem[]
+  invoice      Invoice?
 
   @@map("orders")
 }
@@ -416,4 +428,38 @@ model AuditLog {
   @@index([organizationId, createdAt])
   @@index([entityType, entityId])
   @@map("audit_logs")
+}
+
+// =============================================
+
+enum InvoiceStatus {
+  PENDIENTE
+  ENVIADO
+  OBSERVADO
+  ANULADO
+}
+
+model Invoice {
+  id             String        @id @default(cuid())
+  organizationId String
+  orderId        String        @unique
+  nroFactura     Int
+  cufe           String?       // Código Único de Factura Electrónica (del SIN)
+  cuis           String        // CUIS vigente al momento de emisión
+  cufd           String        // CUFD vigente al momento de emisión
+  nitEmisor      String
+  nitReceptor    String        @default("99999999") // consumidor final si no tiene NIT
+  razonReceptor  String
+  status         InvoiceStatus @default(PENDIENTE)
+  xmlData        String?       @db.Text // XML firmado enviado al SIN
+  sinResponse    Json?         // Respuesta cruda del SIN/intermediario
+  total          Decimal       @db.Decimal(10, 2)
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+
+  organization   Organization  @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  order          Order         @relation(fields: [orderId], references: [id], onDelete: Cascade)
+
+  @@index([organizationId, createdAt])
+  @@map("invoices")
 }
