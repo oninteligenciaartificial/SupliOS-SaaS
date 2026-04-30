@@ -129,6 +129,11 @@ Storefront público en `/{slug}/tienda`. La DB ya soporta productos con variante
 9. [ ] Facturación SIAT Bolivia
 10. [ ] Pagos QR Bolivia
 11. ✅ E-commerce storefront — `/{slug}/tienda` catálogo público + carrito + checkout (2026-04-29)
+12. ✅ Emails automáticos — Brevo configurado, 12 tipos de email, 5 cron jobs (2026-04-30)
+    - Remitente temporal: `oninteligenciaartificial@gmail.com` (verificado en Brevo)
+    - Pendiente: dominio propio para usar `noreply@gestios.app`
+    - Cron stock bajo: `GET /api/cron/low-stock` diario 08:30 (CRECER+)
+    - Ver: `docs/BREVO-SETUP.md` y `docs/EMAILS.md`
     - GET `/api/tienda/[slug]`: org info + productos activos (gate: plan PRO+)
     - POST `/api/tienda/checkout`: pedido público con stock decrement, email confirmación opcional
     - UI: catálogo grid, carrito drawer, picker de variantes, formulario checkout

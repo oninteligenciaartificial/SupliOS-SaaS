@@ -8,9 +8,10 @@ EMAIL_FROM_ADDRESS=oninteligenciaartificial@gmail.com  # Remitente verificado en
 CRON_SECRET=...                                   # String aleatorio largo — Vercel lo envía en header Authorization
 ```
 
-## Estado actual del remitente
+## Estado actual ✅ FUNCIONANDO
 
-- **Temporal:** `oninteligenciaartificial@gmail.com` — verificado en Brevo, funciona ahora
+- **Brevo API key:** configurada en Vercel ✅
+- **Remitente temporal:** `oninteligenciaartificial@gmail.com` — verificado en Brevo, emails llegando ✅
 - **Pendiente:** verificar dominio propio con DKIM/SPF para usar `noreply@gestios.app`
   - Requiere dominio propio (no funciona con `.vercel.app`)
   - Comprar en Namecheap/Porkbun ~$12/año
