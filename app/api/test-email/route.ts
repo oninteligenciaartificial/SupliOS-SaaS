@@ -1,5 +1,4 @@
 import { NextResponse } from "next/server";
-import { sendOrderConfirmation } from "@/lib/email";
 
 // TEMPORAL — delete after testing
 export async function GET(request: Request) {
@@ -7,18 +6,23 @@ export async function GET(request: Request) {
   const to = searchParams.get("to");
 
   if (!to) return NextResponse.json({ error: "Falta ?to=email" }, { status: 400 });
-await sendOrderConfirmation({
-    to,
-    customerName: "Cliente de Prueba",
-    orgName: "Mi Tienda Test",
-    orderId: "test-order-12345678",
-    total: 250.5,
-    paymentMethod: "TRANSFERENCIA",
-    items: [
-      { name: "Producto A", quantity: 2, unitPrice: 100 },
-      { name: "Producto B", quantity: 1, unitPrice: 50.5 },
-    ],
+
+  const apiKey = process.env.BREVO_API_KEY;
+  const fromEmail = process.env.EMAIL_FROM_ADDRESS ?? "noreply@gestios.app";
+
+  if (!apiKey) return NextResponse.json({ error: "BREVO_API_KEY no configurada" }, { status: 500 });
+
+  const res = await fetch("https://api.brevo.com/v3/smtp/email", {
+    method: "POST",
+    headers: { "api-key": apiKey, "Content-Type": "application/json" },
+    body: JSON.stringify({
+      sender: { name: "GestiOS Test", email: fromEmail },
+      to: [{ email: to }],
+      subject: "Test email GestiOS",
+      htmlContent: "<p>Si ves esto, Brevo funciona correctamente.</p>",
+    }),
   });
 
-  return NextResponse.json({ ok: true, sent_to: to });
+  const body = await res.json();
+  return NextResponse.json({ status: res.status, brevo_response: body, from: fromEmail });
 }
