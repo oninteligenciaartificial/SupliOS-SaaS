@@ -2,7 +2,17 @@
   "permissions": {
     "allow": [
       "PowerShell(gh auth status 2>&1)",
-      "PowerShell(gh --version)"
+      "PowerShell(gh --version)",
+      "Bash(npx tsc *)",
+      "Read(//c/Users/PC/.claude/skills/**)",
+      "Bash(git add *)",
+      "Bash(git commit *)",
+      "Bash(git push *)"
     ]
+  },
+  "enabledPlugins": {
+    "caveman@caveman": true,
+    "frontend-design@claude-plugins-official": true,
+    "superpowers@claude-plugins-official": true
   }
 }
