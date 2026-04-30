@@ -43,6 +43,7 @@ export const FEATURE_PLAN: Record<string, PlanType> = {
   csv_import:       "CRECER",
   csv_export:       "CRECER",
   registro_publico: "PRO",
+  tienda_online:    "PRO",
   email_basic:      "PRO",
   email_advanced:   "EMPRESARIAL",
   sucursales:       "EMPRESARIAL",

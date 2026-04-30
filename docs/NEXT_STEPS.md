@@ -119,7 +119,7 @@ Storefront público en `/{slug}/tienda`. La DB ya soporta productos con variante
 **P3 — Deuda técnica:**
 3. ✅ Bug 3: getSuperAdmin() extraído a `lib/superadmin.ts` — resuelto 2026-04-29
 4. ✅ Tests: 31 tests pasando (rate-limit, plans, audit) — resuelto 2026-04-29
-5. [ ] Considerar split de `inventory/page.tsx` (716 líneas)
+5. ✅ Split `inventory/page.tsx` (793 líneas → 4 componentes en `components/`) — resuelto 2026-04-29
 
 **P4 — Nuevas features:**
 6. ✅ Foto de producto — `POST /api/products/upload-image` + UI con preview en inventario (2026-04-29)
@@ -128,4 +128,8 @@ Storefront público en `/{slug}/tienda`. La DB ya soporta productos con variante
 8. ✅ Filtro por sucursal en reportes — param branchId en backend + selector de sucursal en UI (2026-04-29)
 9. [ ] Facturación SIAT Bolivia
 10. [ ] Pagos QR Bolivia
-11. [ ] E-commerce storefront
+11. ✅ E-commerce storefront — `/{slug}/tienda` catálogo público + carrito + checkout (2026-04-29)
+    - GET `/api/tienda/[slug]`: org info + productos activos (gate: plan PRO+)
+    - POST `/api/tienda/checkout`: pedido público con stock decrement, email confirmación opcional
+    - UI: catálogo grid, carrito drawer, picker de variantes, formulario checkout
+    - Feature flag `tienda_online: "PRO"` en lib/plans.ts
