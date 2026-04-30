@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { getBusinessUI } from "@/lib/business-ui";
 import type { BusinessType } from "@/lib/business-types";
-import { Search, Plus, Minus, Trash2, ShoppingCart, CheckCircle, X, Tag, ChevronUp, Layers, Star } from "lucide-react";
+import { Search, Plus, Minus, Trash2, ShoppingCart, CheckCircle, X, Tag, ChevronUp, Layers, Star, Barcode } from "lucide-react";
 
 interface ProductVariant {
   id: string;
@@ -20,6 +20,7 @@ interface Product {
   stock: number;
   minStock: number;
   sku: string | null;
+  barcode: string | null;
   category: { name: string } | null;
   hasVariants: boolean;
   variants?: ProductVariant[];
@@ -78,6 +79,8 @@ export default function POSPage() {
   const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null);
   const [pointsToRedeem, setPointsToRedeem] = useState(0);
   const [businessType, setBusinessType] = useState<BusinessType>("GENERAL");
+  const [barcodeInput, setBarcodeInput] = useState("");
+  const [barcodeError, setBarcodeError] = useState("");
   const customerSearchRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const fetchData = useCallback(async () => {
@@ -118,11 +121,28 @@ export default function POSPage() {
   const categories = Array.from(new Set(products.map((p) => p.category?.name ?? "Sin categoria"))).sort();
 
   const filtered = products.filter((p) => {
-    const matchSearch = p.name.toLowerCase().includes(search.toLowerCase()) ||
-      (p.sku ?? "").toLowerCase().includes(search.toLowerCase());
+    const q = search.toLowerCase();
+    const matchSearch = p.name.toLowerCase().includes(q) ||
+      (p.sku ?? "").toLowerCase().includes(q) ||
+      (p.barcode ?? "").toLowerCase().includes(q);
     const matchCat = !categoryFilter || (p.category?.name ?? "Sin categoria") === categoryFilter;
     return matchSearch && matchCat;
   });
+
+  function handleBarcodeSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    const code = barcodeInput.trim();
+    if (!code) return;
+    const match = products.find((p) => p.barcode === code || p.sku === code);
+    if (!match) {
+      setBarcodeError(`No se encontró producto con código "${code}"`);
+      setBarcodeInput("");
+      return;
+    }
+    setBarcodeError("");
+    setBarcodeInput("");
+    addToCart(match);
+  }
 
   function addToCart(product: Product) {
     if (product.hasVariants) {
@@ -478,15 +498,27 @@ export default function POSPage() {
       <div className="hidden lg:flex h-[calc(100vh-0px)]">
         <div className="flex-1 flex flex-col overflow-hidden">
           <div className="p-5 border-b border-white/5 space-y-3 flex-shrink-0">
-            <div className="relative">
-              <Search size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-brand-muted" />
-              <input
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                placeholder={ui.searchPlaceholder}
-                className="w-full pl-10 pr-4 py-3 rounded-xl bg-white/5 border border-white/10 text-white placeholder-brand-muted focus:outline-none focus:border-brand-kinetic-orange transition-colors"
-              />
+            <div className="flex gap-2">
+              <div className="relative flex-1">
+                <Search size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-brand-muted" />
+                <input
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                  placeholder={ui.searchPlaceholder}
+                  className="w-full pl-10 pr-4 py-3 rounded-xl bg-white/5 border border-white/10 text-white placeholder-brand-muted focus:outline-none focus:border-brand-kinetic-orange transition-colors"
+                />
+              </div>
+              <form onSubmit={handleBarcodeSubmit} className="relative">
+                <Barcode size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-brand-muted" />
+                <input
+                  value={barcodeInput}
+                  onChange={(e) => { setBarcodeInput(e.target.value); setBarcodeError(""); }}
+                  placeholder="Escanear código"
+                  className="pl-9 pr-3 py-3 w-44 rounded-xl bg-white/5 border border-white/10 text-white placeholder-brand-muted focus:outline-none focus:border-blue-400 transition-colors text-sm"
+                />
+              </form>
             </div>
+            {barcodeError && <p className="text-xs text-red-400">{barcodeError}</p>}
             <div className="flex gap-2 flex-wrap">
               <button onClick={() => setCategoryFilter("")} className={`px-4 py-1.5 rounded-full text-xs font-medium transition-colors ${!categoryFilter ? "bg-brand-kinetic-orange text-black" : "bg-white/5 text-brand-muted hover:text-white"}`}>Todos</button>
               {categories.map((c) => (
