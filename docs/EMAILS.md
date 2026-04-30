@@ -1,9 +1,11 @@
 # Emails Automáticos
 
 Proveedor: **Brevo API** (`BREVO_API_KEY`).  
-Remitente: `GestiOS <noreply@gestios.app>` (configurable con `EMAIL_FROM_ADDRESS`).  
+Remitente: configurable con `EMAIL_FROM_ADDRESS` — actualmente `oninteligenciaartificial@gmail.com` (temporal).  
 Template: HTML con diseño dark, fondo `#0a0a0a`, acento naranja `#ff6b00`.  
 Todos los envíos son fire-and-forget (`.catch(() => {})`).
+
+> **Pendiente:** verificar dominio propio para usar `noreply@gestios.app`. Ver `docs/BREVO-SETUP.md`.
 
 ---
 

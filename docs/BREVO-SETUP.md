@@ -3,9 +3,19 @@
 ## Variables de entorno requeridas
 
 ```env
-BREVO_API_KEY=xkeysib-...       # API key de Brevo — obtener en Brevo → Settings → SMTP & API → API Keys
-EMAIL_FROM_ADDRESS=noreply@gestios.app  # Dirección remitente (debe estar verificada en Brevo)
+BREVO_API_KEY=xkeysib-...                        # API key de Brevo — obtener en Brevo → Settings → SMTP & API → API Keys
+EMAIL_FROM_ADDRESS=oninteligenciaartificial@gmail.com  # Remitente verificado en Brevo (temporal hasta tener dominio propio)
+CRON_SECRET=...                                   # String aleatorio largo — Vercel lo envía en header Authorization
 ```
+
+## Estado actual del remitente
+
+- **Temporal:** `oninteligenciaartificial@gmail.com` — verificado en Brevo, funciona ahora
+- **Pendiente:** verificar dominio propio con DKIM/SPF para usar `noreply@gestios.app`
+  - Requiere dominio propio (no funciona con `.vercel.app`)
+  - Comprar en Namecheap/Porkbun ~$12/año
+  - Agregar registros SPF + DKIM + DMARC en DNS del dominio
+  - Una vez verificado: cambiar `EMAIL_FROM_ADDRESS=noreply@gestios.app`
 
 ## Pasos para configurar Brevo
 
