@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
-import { createClient } from "@/lib/supabase/server";
 import { prisma } from "@/lib/prisma";
+import { getSuperAdmin } from "@/lib/superadmin";
 import { z } from "zod";
 
 const schema = z.object({
@@ -10,15 +10,6 @@ const schema = z.object({
   plan: z.enum(["BASICO", "CRECER", "PRO", "EMPRESARIAL"]).optional(),
   planExpiresAt: z.string().datetime().optional().nullable(),
 });
-
-async function getSuperAdmin() {
-  const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) return null;
-  const profile = await prisma.profile.findUnique({ where: { userId: user.id } });
-  if (!profile || profile.role !== "SUPERADMIN") return null;
-  return profile;
-}
 
 export async function PATCH(request: Request, { params }: { params: Promise<{ id: string }> }) {
   const admin = await getSuperAdmin();

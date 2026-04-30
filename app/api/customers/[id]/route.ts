@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server";
 import { getTenantProfile } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { hasPermission } from "@/lib/permissions";
+import { logAudit } from "@/lib/audit";
 import { z } from "zod";
 
 const updateSchema = z.object({
@@ -16,6 +18,7 @@ const updateSchema = z.object({
 export async function PUT(request: Request, { params }: { params: Promise<{ id: string }> }) {
   const profile = await getTenantProfile();
   if (!profile) return NextResponse.json({ error: "No autorizado" }, { status: 401 });
+  if (!hasPermission(profile.role, "customers:edit")) return NextResponse.json({ error: "Sin permiso" }, { status: 403 });
 
   const { id } = await params;
 
@@ -43,12 +46,15 @@ export async function PUT(request: Request, { params }: { params: Promise<{ id: 
     },
   });
 
+  logAudit({ orgId: profile.organizationId, orgPlan: profile.plan, userId: profile.userId, action: "update", entityType: "customer", entityId: id, before: { name: existing.name, phone: existing.phone, email: existing.email }, after: { name: customer.name, phone: customer.phone, email: customer.email } });
+
   return NextResponse.json(customer);
 }
 
 export async function DELETE(_: Request, { params }: { params: Promise<{ id: string }> }) {
   const profile = await getTenantProfile();
   if (!profile) return NextResponse.json({ error: "No autorizado" }, { status: 401 });
+  if (!hasPermission(profile.role, "customers:edit")) return NextResponse.json({ error: "Sin permiso" }, { status: 403 });
 
   const { id } = await params;
 
@@ -56,5 +62,8 @@ export async function DELETE(_: Request, { params }: { params: Promise<{ id: str
   if (!existing) return NextResponse.json({ error: "No encontrado" }, { status: 404 });
 
   await prisma.customer.delete({ where: { id } });
+
+  logAudit({ orgId: profile.organizationId, orgPlan: profile.plan, userId: profile.userId, action: "delete", entityType: "customer", entityId: id, before: { name: existing.name }, after: null });
+
   return NextResponse.json({ ok: true });
 }

@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { getTenantProfile } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { logAudit } from "@/lib/audit";
 import { z } from "zod";
 
 const updateSchema = z.object({
@@ -35,6 +36,9 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
   if (!result.success) return NextResponse.json({ error: "Datos invalidos" }, { status: 400 });
 
   const updated = await prisma.product.update({ where: { id }, data: result.data });
+
+  logAudit({ orgId: profile.organizationId, orgPlan: profile.plan, userId: profile.userId, action: "update", entityType: "product", entityId: id, before: { name: product.name, price: product.price, stock: product.stock }, after: { name: updated.name, price: updated.price, stock: updated.stock } });
+
   return NextResponse.json(updated);
 }
 
@@ -50,5 +54,8 @@ export async function DELETE(_request: Request, { params }: { params: Promise<{ 
   }
 
   await prisma.product.update({ where: { id }, data: { active: false } });
+
+  logAudit({ orgId: profile.organizationId, orgPlan: profile.plan, userId: profile.userId, action: "delete", entityType: "product", entityId: id, before: { name: product.name }, after: null });
+
   return NextResponse.json({ ok: true });
 }

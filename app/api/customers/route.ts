@@ -4,6 +4,7 @@ import { prisma } from "@/lib/prisma";
 import { PLAN_LIMITS } from "@/lib/plans";
 import { hasPermission } from "@/lib/permissions";
 import { z } from "zod";
+import { logAudit } from "@/lib/audit";
 
 const createSchema = z.object({
   name: z.string().min(1),
@@ -82,6 +83,8 @@ export async function POST(request: Request) {
       notes: result.data.notes ?? null,
     },
   });
+
+  logAudit({ orgId: profile.organizationId, orgPlan: profile.plan, userId: profile.userId, action: "create", entityType: "customer", entityId: customer.id, after: { name: customer.name, phone: customer.phone, email: customer.email } });
 
   return NextResponse.json(customer, { status: 201 });
 }

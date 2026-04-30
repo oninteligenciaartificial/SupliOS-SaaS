@@ -1,6 +1,8 @@
 "use client";
 
 import { useState, useEffect, useCallback, useRef } from "react";
+import { getBusinessUI } from "@/lib/business-ui";
+import type { BusinessType } from "@/lib/business-types";
 import { Search, Plus, Minus, Trash2, ShoppingCart, CheckCircle, X, Tag, ChevronUp, Layers, Star } from "lucide-react";
 
 interface ProductVariant {
@@ -75,13 +77,15 @@ export default function POSPage() {
   const [customerResults, setCustomerResults] = useState<Customer[]>([]);
   const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null);
   const [pointsToRedeem, setPointsToRedeem] = useState(0);
+  const [businessType, setBusinessType] = useState<BusinessType>("GENERAL");
   const customerSearchRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const fetchData = useCallback(async () => {
     setLoading(true);
-    const [pRes, dRes] = await Promise.all([fetch("/api/products"), fetch("/api/discounts")]);
+    const [pRes, dRes, meRes] = await Promise.all([fetch("/api/products"), fetch("/api/discounts"), fetch("/api/me")]);
     if (pRes.ok) { const d = await pRes.json(); setProducts(d.data ?? d); }
     if (dRes.ok) setDiscounts(await dRes.json());
+    if (meRes.ok) { const me = await meRes.json(); setBusinessType((me.organization?.businessType ?? "GENERAL") as BusinessType); }
     setLoading(false);
   }, []);
 
@@ -249,13 +253,15 @@ export default function POSPage() {
     return cart.filter((i) => i.product.id === id).reduce((s, i) => s + i.qty, 0);
   }
 
+  const ui = getBusinessUI(businessType);
+
   const CartContent = (
     <div className="flex flex-col h-full">
       <div className="flex-1 overflow-y-auto p-4 space-y-2">
         {cart.length === 0 ? (
           <div className="py-12 text-center text-brand-muted">
             <ShoppingCart size={36} className="mx-auto mb-3 opacity-20" />
-            <p className="text-sm">Selecciona productos</p>
+            <p className="text-sm">Selecciona {ui.productPlural.toLowerCase()}</p>
           </div>
         ) : (
           cart.map((item) => {
@@ -423,7 +429,7 @@ export default function POSPage() {
             <div className="flex justify-between items-center">
               <div>
                 <h3 className="font-bold text-white">{variantTarget.name}</h3>
-                <p className="text-xs text-brand-muted mt-0.5">Elige una variante</p>
+                <p className="text-xs text-brand-muted mt-0.5">{ui.posVariantHint}</p>
               </div>
               <button onClick={() => setVariantTarget(null)} className="text-brand-muted hover:text-white transition-colors">
                 <X size={18} />
@@ -477,7 +483,7 @@ export default function POSPage() {
               <input
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
-                placeholder="Buscar producto o SKU..."
+                placeholder={ui.searchPlaceholder}
                 className="w-full pl-10 pr-4 py-3 rounded-xl bg-white/5 border border-white/10 text-white placeholder-brand-muted focus:outline-none focus:border-brand-kinetic-orange transition-colors"
               />
             </div>
@@ -543,7 +549,7 @@ export default function POSPage() {
             <input
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              placeholder="Buscar producto..."
+              placeholder={ui.searchPlaceholder}
               className="w-full pl-9 pr-4 py-2.5 rounded-xl bg-white/5 border border-white/10 text-white placeholder-brand-muted focus:outline-none focus:border-brand-kinetic-orange transition-colors text-sm"
             />
           </div>

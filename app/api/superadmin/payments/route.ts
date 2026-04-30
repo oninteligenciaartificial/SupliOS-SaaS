@@ -1,18 +1,9 @@
 import { NextResponse } from "next/server";
-import { createClient } from "@/lib/supabase/server";
 import { prisma } from "@/lib/prisma";
+import { getSuperAdmin } from "@/lib/superadmin";
 import { sendPlanActivatedEmail } from "@/lib/email";
 import { reportAsyncError } from "@/lib/monitoring";
 import { z } from "zod";
-
-async function getSuperAdmin() {
-  const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) return null;
-  const profile = await prisma.profile.findUnique({ where: { userId: user.id } });
-  if (!profile || profile.role !== "SUPERADMIN") return null;
-  return profile;
-}
 
 const actionSchema = z.object({
   action: z.enum(["CONFIRMADO", "RECHAZADO"]),

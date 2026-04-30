@@ -73,6 +73,10 @@ export async function GET(request: Request) {
 - WhatsApp: backend listo y sin `comingSoon`; falta configuración externa en Vercel/Meta
 - Loyalty points: acumulación y canje en POS implementados
 - Audit log: backend + UI `/audit` implementados (plan EMPRESARIAL)
+- `logAudit()` activo en orders (create/update); **pendiente** en products y customers (6 handlers)
+- **Bug activo [HIGH]:** `app/api/customers/[id]/route.ts` — PUT y DELETE sin `hasPermission()`
+- Tests: solo `tests/rate-limit.test.ts` (5 tests unitarios); cobertura insuficiente
+- Ver análisis completo en `docs/ANALYSIS.md`
 
 ## Documentación completa
 

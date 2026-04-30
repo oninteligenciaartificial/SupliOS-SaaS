@@ -1,17 +1,8 @@
 import { NextResponse } from "next/server";
-import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { prisma } from "@/lib/prisma";
+import { getSuperAdmin } from "@/lib/superadmin";
 import { z } from "zod";
-
-async function getSuperAdmin() {
-  const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) return null;
-  const profile = await prisma.profile.findUnique({ where: { userId: user.id } });
-  if (!profile || profile.role !== "SUPERADMIN") return null;
-  return profile;
-}
 
 const schema = z.object({
   orgName: z.string().min(1),

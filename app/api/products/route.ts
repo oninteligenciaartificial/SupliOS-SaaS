@@ -5,6 +5,7 @@ import { Prisma } from "@prisma/client";
 import { PLAN_LIMITS } from "@/lib/plans";
 import { hasPermission } from "@/lib/permissions";
 import { z } from "zod";
+import { logAudit } from "@/lib/audit";
 
 const createSchema = z.object({
   name: z.string().min(1),
@@ -102,6 +103,8 @@ export async function POST(request: Request) {
       attributeSchema: (attributeSchema ?? Prisma.DbNull) as Prisma.InputJsonValue | typeof Prisma.DbNull,
     },
   });
+
+  logAudit({ orgId: profile.organizationId, orgPlan: profile.plan, userId: profile.userId, action: "create", entityType: "product", entityId: product.id, after: { name: product.name, price: product.price, stock: product.stock } });
 
   return NextResponse.json(product, { status: 201 });
 }

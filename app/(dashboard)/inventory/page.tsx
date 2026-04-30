@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback } from "react";
 import { Search, Plus, X, Pencil, Trash2, Package, Upload, Download, PackagePlus, Layers, ChevronDown, ChevronUp } from "lucide-react";
 import { useRef } from "react";
 import { getBusinessSchema, type BusinessType } from "@/lib/business-types";
+import { getBusinessUI } from "@/lib/business-ui";
 
 interface Category { id: string; name: string }
 
@@ -267,20 +268,21 @@ export default function Inventory() {
 
   const attrSchema = getBusinessSchema(businessType);
   const attrKeys = Object.keys(attrSchema);
+  const ui = getBusinessUI(businessType);
 
   return (
     <div className="p-4 md:p-8 max-w-6xl mx-auto space-y-5 md:space-y-8">
       <header className="animate-pop space-y-3">
         <div className="flex justify-between items-start">
           <div>
-            <h1 className="text-3xl md:text-4xl font-display font-bold text-white tracking-tight">Inventario</h1>
-            <p className="text-brand-muted mt-1 text-sm">Gestion de productos y alertas de stock</p>
+            <h1 className="text-3xl md:text-4xl font-display font-bold text-white tracking-tight">{ui.pageTitle}</h1>
+            <p className="text-brand-muted mt-1 text-sm">{ui.pageSubtitle}</p>
           </div>
           <button
             onClick={openCreate}
             className="bg-gradient-to-br from-brand-kinetic-orange to-brand-kinetic-orange-light text-black px-4 md:px-6 py-2.5 rounded-full font-bold flex items-center gap-2 shadow-[0_0_20px_rgba(255,107,0,0.3)] text-sm md:text-base flex-shrink-0"
           >
-            <Plus size={16} /> <span className="hidden sm:inline">Nuevo</span><span className="hidden md:inline"> Producto</span>
+            <Plus size={16} /> <span className="hidden sm:inline">{ui.newButtonLabel}</span><span className="sm:hidden">Nuevo</span>
           </button>
         </div>
         <div className="flex items-center gap-2">
@@ -305,7 +307,7 @@ export default function Inventory() {
         <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-brand-muted" size={20} />
         <input
           type="text"
-          placeholder="Buscar por nombre o SKU..."
+          placeholder={ui.searchPlaceholder}
           className="w-full bg-brand-surface-highest/50 border border-white/10 rounded-xl py-3 pl-12 pr-4 text-white focus:outline-none focus:border-brand-kinetic-orange transition-colors"
           value={search}
           onChange={(e) => setSearch(e.target.value)}
@@ -320,10 +322,10 @@ export default function Inventory() {
           <table className="w-full text-left border-collapse">
             <thead>
               <tr className="border-b border-white/10 bg-white/5">
-                <th className="p-5 font-medium text-brand-muted">Producto</th>
-                <th className="p-5 font-medium text-brand-muted">Categoria</th>
+                <th className="p-5 font-medium text-brand-muted">{ui.productSingular}</th>
+                <th className="p-5 font-medium text-brand-muted">{ui.categoryLabel}</th>
                 <th className="p-5 font-medium text-brand-muted">Precio</th>
-                <th className="p-5 font-medium text-brand-muted">Stock</th>
+                <th className="p-5 font-medium text-brand-muted">{ui.stockLabel}</th>
                 <th className="p-5 font-medium text-brand-muted">Estado</th>
                 <th className="p-5 font-medium text-brand-muted text-right">Acciones</th>
               </tr>
@@ -370,7 +372,7 @@ export default function Inventory() {
         {!loading && filtered.length === 0 && (
           <div className="py-16 text-center text-brand-muted space-y-3">
             <Package size={40} className="mx-auto opacity-30" />
-            <p>{search ? "No hay productos que coincidan." : "Aun no tienes productos. Crea el primero."}</p>
+            <p>{search ? `No hay ${ui.productPlural.toLowerCase()} que coincidan.` : ui.emptyStateMessage}</p>
           </div>
         )}
       </div>
@@ -382,7 +384,7 @@ export default function Inventory() {
         ) : filtered.length === 0 ? (
           <div className="py-16 text-center text-brand-muted space-y-3">
             <Package size={40} className="mx-auto opacity-30" />
-            <p>{search ? "No hay productos que coincidan." : "Aun no tienes productos."}</p>
+            <p>{search ? `No hay ${ui.productPlural.toLowerCase()} que coincidan.` : ui.emptyStateMessage}</p>
           </div>
         ) : filtered.map((item) => {
           const status = stockStatus(item.stock, item.minStock, item.hasVariants);
@@ -432,7 +434,7 @@ export default function Inventory() {
           <div className="glass-panel w-full max-w-lg rounded-t-3xl sm:rounded-3xl p-5 sm:p-8 space-y-5 sm:space-y-6 max-h-[95vh] sm:max-h-[90vh] flex flex-col">
             <div className="flex justify-between items-center">
               <h2 className="text-xl font-display font-bold text-white">
-                {editing ? "Editar Producto" : "Nuevo Producto"}
+                {editing ? `Editar ${ui.productSingular}` : `Nuevo ${ui.productSingular}`}
               </h2>
               <button onClick={() => setShowModal(false)} className="text-brand-muted hover:text-white transition-colors">
                 <X size={20} />
@@ -441,37 +443,42 @@ export default function Inventory() {
 
             <div className="overflow-y-auto flex-1 pr-1 space-y-4">
               <form onSubmit={handleSave} className="space-y-4">
-                <Field label="Nombre *">
-                  <input required value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} className={input} placeholder="Whey Protein 100%" />
+                <Field label={`Nombre del ${ui.productSingular.toLowerCase()} *`}>
+                  <input required value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} className={input} placeholder={ui.namePlaceholder} />
                 </Field>
 
                 <div className="grid grid-cols-2 gap-3">
-                  <Field label="SKU">
-                    <input value={form.sku} onChange={(e) => setForm({ ...form, sku: e.target.value })} className={input} placeholder="WP-100" />
+                  <Field label={ui.skuLabel}>
+                    <input value={form.sku} onChange={(e) => setForm({ ...form, sku: e.target.value })} className={input} placeholder="Ej: 001" />
                   </Field>
-                  <Field label="Cod. barras">
+                  <Field label="Cód. barras">
                     <input value={form.barcode} onChange={(e) => setForm({ ...form, barcode: e.target.value })} className={input} placeholder="7501234..." />
                   </Field>
                 </div>
 
-                <div className="grid grid-cols-2 gap-3">
-                  <Field label="Unidad">
-                    <select value={form.unit} onChange={(e) => setForm({ ...form, unit: e.target.value })} className={input}>
-                      <option value="">Sin especificar</option>
-                      <option value="pieza">Pieza</option>
-                      <option value="kg">Kilogramo (kg)</option>
-                      <option value="g">Gramo (g)</option>
-                      <option value="litro">Litro</option>
-                      <option value="ml">Mililitro (ml)</option>
-                      <option value="capsula">Capsula</option>
-                      <option value="tableta">Tableta</option>
-                      <option value="sobre">Sobre</option>
-                      <option value="frasco">Frasco</option>
-                    </select>
-                  </Field>
-                  <Field label="Categoria">
+                <div className={`grid gap-3 ${ui.showUnit ? "grid-cols-2" : "grid-cols-1"}`}>
+                  {ui.showUnit && (
+                    <Field label={ui.unitLabel}>
+                      <select value={form.unit} onChange={(e) => setForm({ ...form, unit: e.target.value })} className={input}>
+                        <option value="">Sin especificar</option>
+                        <option value="pieza">Pieza</option>
+                        <option value="kg">Kilogramo (kg)</option>
+                        <option value="g">Gramo (g)</option>
+                        <option value="litro">Litro</option>
+                        <option value="ml">Mililitro (ml)</option>
+                        <option value="capsula">Cápsula</option>
+                        <option value="tableta">Tableta</option>
+                        <option value="sobre">Sobre</option>
+                        <option value="frasco">Frasco</option>
+                        <option value="metro">Metro</option>
+                        <option value="rollo">Rollo</option>
+                        <option value="par">Par</option>
+                      </select>
+                    </Field>
+                  )}
+                  <Field label={ui.categoryLabel}>
                     <select value={form.categoryId} onChange={(e) => setForm({ ...form, categoryId: e.target.value })} className={input}>
-                      <option value="">Sin categoria</option>
+                      <option value="">Sin {ui.categoryLabel.toLowerCase()}</option>
                       {categories.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
                     </select>
                   </Field>
@@ -492,8 +499,8 @@ export default function Inventory() {
                     <div className="flex items-center gap-2">
                       <Layers size={15} className="text-blue-400" />
                       <div>
-                        <p className="text-sm text-white font-medium">Variantes</p>
-                        <p className="text-xs text-brand-muted">Talla, color, sabor u otras opciones</p>
+                        <p className="text-sm text-white font-medium">{ui.variantLabel}</p>
+                        <p className="text-xs text-brand-muted">{ui.posVariantHint}</p>
                       </div>
                     </div>
                     <button
@@ -526,9 +533,13 @@ export default function Inventory() {
                   </div>
                 )}
 
-                <Field label="Fecha vencimiento del lote">
-                  <input type="date" value={form.batchExpiry} onChange={(e) => setForm({ ...form, batchExpiry: e.target.value })} className={input} />
-                </Field>
+                {/* Vencimiento — siempre disponible, destacado para FARMACIA/SUPLEMENTOS */}
+                <div className={ui.showBatchExpiry ? "p-3 rounded-xl bg-yellow-500/5 border border-yellow-500/20" : ""}>
+                  <Field label={ui.showBatchExpiry ? "⚠ Fecha de vencimiento del lote *" : "Fecha vencimiento del lote"}>
+                    <input type="date" value={form.batchExpiry} onChange={(e) => setForm({ ...form, batchExpiry: e.target.value })} className={input} />
+                  </Field>
+                  {ui.showBatchExpiry && <p className="text-xs text-yellow-500/70 mt-1.5">Obligatorio para control de vencimientos y alertas automáticas.</p>}
+                </div>
 
                 <Field label="URL de imagen">
                   <input value={form.imageUrl} onChange={(e) => setForm({ ...form, imageUrl: e.target.value })} className={input} placeholder="https://..." />
@@ -541,7 +552,7 @@ export default function Inventory() {
                   disabled={saving}
                   className="w-full py-3 rounded-xl bg-gradient-to-br from-brand-kinetic-orange to-brand-kinetic-orange-light text-black font-bold transition-opacity disabled:opacity-50"
                 >
-                  {saving ? "Guardando..." : editing ? "Guardar Cambios" : "Crear Producto"}
+                  {saving ? "Guardando..." : editing ? "Guardar Cambios" : `Crear ${ui.productSingular}`}
                 </button>
               </form>
 
@@ -686,8 +697,8 @@ export default function Inventory() {
           <div className="glass-panel w-full max-w-sm rounded-3xl p-8 space-y-6 text-center">
             <div className="text-red-400"><Trash2 size={40} className="mx-auto" /></div>
             <div>
-              <h2 className="text-xl font-bold text-white">Eliminar producto</h2>
-              <p className="text-brand-muted mt-2">El producto se desactivara del inventario.</p>
+              <h2 className="text-xl font-bold text-white">Eliminar {ui.productSingular.toLowerCase()}</h2>
+              <p className="text-brand-muted mt-2">{ui.productSingular} se desactivará del inventario.</p>
             </div>
             <div className="flex gap-4">
               <button onClick={() => setDeleteId(null)} className="flex-1 py-3 rounded-xl border border-white/10 text-white hover:bg-white/5 transition-colors">
