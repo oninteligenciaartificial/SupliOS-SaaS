@@ -3,7 +3,7 @@
 ## Variables de entorno requeridas
 
 ```env
-BREVO_API_KEY=xkeysib-...       # API key de Brevo (SMTP API)
+BREVO_API_KEY=xkeysib-...       # API key de Brevo — obtener en Brevo → Settings → SMTP & API → API Keys
 EMAIL_FROM_ADDRESS=noreply@gestios.app  # Dirección remitente (debe estar verificada en Brevo)
 ```
 
