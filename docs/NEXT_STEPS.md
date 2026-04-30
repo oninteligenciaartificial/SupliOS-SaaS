@@ -72,7 +72,7 @@ if (!hasPermission(profile.role, "customers:update")) return NextResponse.json({
 
 | Feature | Modelo DB | Backend | UI |
 |---|---|---|---|
-| Foto de producto | ✅ `Product.imageUrl` | ❌ sin upload | ❌ |
+| Foto de producto | ✅ `Product.imageUrl` | ✅ `POST /api/products/upload-image` (Supabase Storage) | ✅ Upload con preview en inventario |
 | Barcode scanner en POS | ✅ `Product.barcode` | — | ❌ |
 | Filtro por sucursal en reportes | ✅ `Order.branchId` | ❌ | ❌ |
 
@@ -122,7 +122,8 @@ Storefront público en `/{slug}/tienda`. La DB ya soporta productos con variante
 5. [ ] Considerar split de `inventory/page.tsx` (716 líneas)
 
 **P4 — Nuevas features:**
-6. [ ] Foto de producto (upload backend + UI)
+6. ✅ Foto de producto — `POST /api/products/upload-image` + UI con preview en inventario (2026-04-29)
+   ⚠ Requiere bucket `product-images` en Supabase Storage (crear en dashboard, visibility: public)
 7. [ ] Barcode scanner en POS
 8. [ ] Filtro por sucursal en reportes
 9. [ ] Facturación SIAT Bolivia

@@ -1,8 +1,7 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
-import { Search, Plus, X, Pencil, Trash2, Package, Upload, Download, PackagePlus, Layers, ChevronDown, ChevronUp } from "lucide-react";
-import { useRef } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
+import { Search, Plus, X, Pencil, Trash2, Package, Upload, Download, PackagePlus, Layers, ChevronDown, ChevronUp, ImageIcon } from "lucide-react";
 import { getBusinessSchema, type BusinessType } from "@/lib/business-types";
 import { getBusinessUI } from "@/lib/business-ui";
 
@@ -77,6 +76,8 @@ export default function Inventory() {
   const [stockSaving, setStockSaving] = useState(false);
   const [importing, setImporting] = useState(false);
   const [importMsg, setImportMsg] = useState("");
+  const [uploadingImage, setUploadingImage] = useState(false);
+  const imageInputRef = useRef<HTMLInputElement>(null);
   const fileRef = useRef<HTMLInputElement>(null);
 
   async function handleImport(e: React.ChangeEvent<HTMLInputElement>) {
@@ -264,6 +265,24 @@ export default function Inventory() {
     await fetch(`/api/products/${id}`, { method: "DELETE" });
     setDeleteId(null);
     fetchData();
+  }
+
+  async function handleImageUpload(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setUploadingImage(true);
+    const fd = new FormData();
+    fd.append("file", file);
+    const res = await fetch("/api/products/upload-image", { method: "POST", body: fd });
+    if (res.ok) {
+      const { url } = await res.json() as { url: string };
+      setForm((f) => ({ ...f, imageUrl: url }));
+    } else {
+      const { error } = await res.json() as { error: string };
+      setFormError(error ?? "Error al subir imagen");
+    }
+    setUploadingImage(false);
+    if (imageInputRef.current) imageInputRef.current.value = "";
   }
 
   const attrSchema = getBusinessSchema(businessType);
@@ -541,8 +560,55 @@ export default function Inventory() {
                   {ui.showBatchExpiry && <p className="text-xs text-yellow-500/70 mt-1.5">Obligatorio para control de vencimientos y alertas automáticas.</p>}
                 </div>
 
-                <Field label="URL de imagen">
-                  <input value={form.imageUrl} onChange={(e) => setForm({ ...form, imageUrl: e.target.value })} className={input} placeholder="https://..." />
+                <Field label="Imagen del producto">
+                  <input
+                    ref={imageInputRef}
+                    type="file"
+                    accept="image/jpeg,image/png,image/webp,image/gif"
+                    className="hidden"
+                    onChange={handleImageUpload}
+                  />
+                  <div className="space-y-2">
+                    {form.imageUrl ? (
+                      <div className="relative w-full h-36 rounded-xl overflow-hidden border border-white/10">
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img src={form.imageUrl} alt="Preview" className="w-full h-full object-contain bg-white/5" />
+                        <button
+                          type="button"
+                          onClick={() => setForm((f) => ({ ...f, imageUrl: "" }))}
+                          className="absolute top-2 right-2 p-1 rounded-full bg-black/60 hover:bg-red-500/80 transition-colors"
+                        >
+                          <X size={14} />
+                        </button>
+                      </div>
+                    ) : (
+                      <button
+                        type="button"
+                        onClick={() => imageInputRef.current?.click()}
+                        disabled={uploadingImage}
+                        className="w-full h-28 rounded-xl border border-dashed border-white/20 hover:border-white/40 flex flex-col items-center justify-center gap-2 text-white/50 hover:text-white/70 transition-colors disabled:opacity-50"
+                      >
+                        {uploadingImage ? (
+                          <span className="text-sm">Subiendo...</span>
+                        ) : (
+                          <>
+                            <ImageIcon size={24} />
+                            <span className="text-sm">Subir imagen (JPG, PNG, WebP)</span>
+                            <span className="text-xs">máx 5 MB</span>
+                          </>
+                        )}
+                      </button>
+                    )}
+                    {form.imageUrl && !uploadingImage && (
+                      <button
+                        type="button"
+                        onClick={() => imageInputRef.current?.click()}
+                        className="text-xs text-white/40 hover:text-white/70 transition-colors"
+                      >
+                        Cambiar imagen
+                      </button>
+                    )}
+                  </div>
                 </Field>
 
                 {formError && <p className="text-red-400 text-sm">{formError}</p>}
