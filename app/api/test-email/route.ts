@@ -7,11 +7,7 @@ export async function GET(request: Request) {
   const to = searchParams.get("to");
 
   if (!to) return NextResponse.json({ error: "Falta ?to=email" }, { status: 400 });
-  if (process.env.NODE_ENV === "production" && !process.env.ALLOW_TEST_EMAIL) {
-    return NextResponse.json({ error: "Disabled in production" }, { status: 403 });
-  }
-
-  await sendOrderConfirmation({
+await sendOrderConfirmation({
     to,
     customerName: "Cliente de Prueba",
     orgName: "Mi Tienda Test",
