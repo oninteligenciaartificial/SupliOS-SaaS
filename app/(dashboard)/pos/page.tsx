@@ -3,7 +3,10 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { getBusinessUI } from "@/lib/business-ui";
 import type { BusinessType } from "@/lib/business-types";
-import { Search, Plus, Minus, Trash2, ShoppingCart, CheckCircle, X, Tag, ChevronUp, Layers, Star, Barcode } from "lucide-react";
+import { Search, Plus, Minus, Trash2, ShoppingCart, CheckCircle, X, Tag, ChevronUp, Layers, Star, Barcode, QrCode } from "lucide-react";
+import { QrPaymentModal } from "./QrPaymentModal";
+import { canUseFeature, canUseAddon } from "@/lib/plans";
+import type { PlanType, AddonType } from "@/lib/plans";
 
 interface ProductVariant {
   id: string;
@@ -81,6 +84,9 @@ export default function POSPage() {
   const [businessType, setBusinessType] = useState<BusinessType>("GENERAL");
   const [barcodeInput, setBarcodeInput] = useState("");
   const [barcodeError, setBarcodeError] = useState("");
+  const [activeAddons, setActiveAddons] = useState<AddonType[]>([]);
+  const [orgPlan, setOrgPlan] = useState<PlanType>("BASICO");
+  const [qrOrderId, setQrOrderId] = useState<string | null>(null);
   const customerSearchRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const fetchData = useCallback(async () => {
@@ -88,7 +94,12 @@ export default function POSPage() {
     const [pRes, dRes, meRes] = await Promise.all([fetch("/api/products"), fetch("/api/discounts"), fetch("/api/me")]);
     if (pRes.ok) { const d = await pRes.json(); setProducts(d.data ?? d); }
     if (dRes.ok) setDiscounts(await dRes.json());
-    if (meRes.ok) { const me = await meRes.json(); setBusinessType((me.organization?.businessType ?? "GENERAL") as BusinessType); }
+    if (meRes.ok) {
+      const me = await meRes.json();
+      setBusinessType((me.organization?.businessType ?? "GENERAL") as BusinessType);
+      setOrgPlan((me.organization?.plan ?? "BASICO") as PlanType);
+      setActiveAddons((me.activeAddons ?? []) as AddonType[]);
+    }
     setLoading(false);
   }, []);
 
@@ -223,8 +234,50 @@ export default function POSPage() {
 
   const total = Math.max(0, subtotal - discountAmount - pointsDiscount);
 
+  function finalizeSale() {
+    setSuccess(true);
+    setCart([]);
+    setCustomerName("");
+    setAppliedDiscount(null);
+    setDiscountCode("");
+    setCartOpen(false);
+    setQrOrderId(null);
+    clearCustomer();
+    fetchData();
+    setTimeout(() => setSuccess(false), 3000);
+  }
+
   async function handleSell() {
     if (cart.length === 0) return;
+
+    // QR flow: create order first, then open modal
+    if (paymentMethod === "QR") {
+      setSelling(true);
+      const res = await fetch("/api/orders", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          customerName: (selectedCustomer?.name ?? customerName.trim()) || "Cliente mostrador",
+          customerId: selectedCustomer?.id,
+          paymentMethod: "TRANSFERENCIA",
+          loyaltyPointsRedeemed: pointsToRedeem > 0 ? pointsToRedeem : undefined,
+          items: cart.map((i) => ({
+            productId: i.product.id,
+            quantity: i.qty,
+            unitPrice: i.effectivePrice,
+            ...(i.variantId ? { variantId: i.variantId, variantSnapshot: { label: i.variantLabel, attributes: i.product.variants?.find((v) => v.id === i.variantId)?.attributes } } : {}),
+          })),
+          notes: appliedDiscount ? `Descuento: ${appliedDiscount.code} (-Bs.${fmt(discountAmount)})` : undefined,
+        }),
+      });
+      setSelling(false);
+      if (res.ok) {
+        const order = await res.json() as { id: string };
+        setQrOrderId(order.id);
+      }
+      return;
+    }
+
     setSelling(true);
     const res = await fetch("/api/orders", {
       method: "POST",
@@ -250,17 +303,7 @@ export default function POSPage() {
       }),
     });
     setSelling(false);
-    if (res.ok) {
-      setSuccess(true);
-      setCart([]);
-      setCustomerName("");
-      setAppliedDiscount(null);
-      setDiscountCode("");
-      setCartOpen(false);
-      clearCustomer();
-      fetchData();
-      setTimeout(() => setSuccess(false), 3000);
-    }
+    if (res.ok) finalizeSale();
   }
 
   // Returns qty in cart for a simple product (no variant)
@@ -381,6 +424,23 @@ export default function POSPage() {
             </button>
           ))}
         </div>
+        {canUseFeature(orgPlan, "pagos_qr") && (
+          <button
+            type="button"
+            onClick={() => canUseAddon(activeAddons, "QR_BOLIVIA") ? setPaymentMethod("QR" as never) : null}
+            title={!canUseAddon(activeAddons, "QR_BOLIVIA") ? "Activa el addon QR Bolivia en Configuración" : undefined}
+            className={`w-full py-2 rounded-xl text-xs font-bold transition-colors flex items-center justify-center gap-1.5 ${
+              paymentMethod === "QR"
+                ? "bg-brand-kinetic-orange text-black"
+                : canUseAddon(activeAddons, "QR_BOLIVIA")
+                  ? "bg-white/5 text-brand-muted hover:text-white"
+                  : "bg-white/5 text-white/20 cursor-not-allowed"
+            }`}
+          >
+            <QrCode size={13} />
+            QR Bolivia {!canUseAddon(activeAddons, "QR_BOLIVIA") && "(addon inactivo)"}
+          </button>
+        )}
         {!appliedDiscount ? (
           <div className="flex gap-2">
             <input
@@ -442,6 +502,16 @@ export default function POSPage() {
 
   return (
     <>
+      {/* QR Payment modal */}
+      {qrOrderId && (
+        <QrPaymentModal
+          orderId={qrOrderId}
+          amount={total}
+          onPaid={finalizeSale}
+          onCancel={() => { setQrOrderId(null); setPaymentMethod("EFECTIVO"); }}
+        />
+      )}
+
       {/* Variant selector modal */}
       {variantTarget && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4">

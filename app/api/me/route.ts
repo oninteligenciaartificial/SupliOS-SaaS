@@ -21,12 +21,19 @@ export async function GET() {
     const cookieStore = await cookies();
     const impersonateOrgId = cookieStore.get("impersonate_org_id")?.value;
     if (impersonateOrgId) {
-      const org = await prisma.organization.findUnique({ where: { id: impersonateOrgId } });
-      return NextResponse.json({ ...profile, role: "ADMIN", organization: org, email: user.email });
+      const [org, addons] = await Promise.all([
+        prisma.organization.findUnique({ where: { id: impersonateOrgId } }),
+        prisma.orgAddon.findMany({ where: { organizationId: impersonateOrgId, active: true }, select: { addon: true } }),
+      ]);
+      return NextResponse.json({ ...profile, role: "ADMIN", organization: org, email: user.email, activeAddons: addons.map((a) => a.addon) });
     }
   }
 
-  return NextResponse.json({ ...profile, email: user.email });
+  const addons = profile.organizationId
+    ? await prisma.orgAddon.findMany({ where: { organizationId: profile.organizationId, active: true }, select: { addon: true } })
+    : [];
+
+  return NextResponse.json({ ...profile, email: user.email, activeAddons: addons.map((a) => a.addon) });
 }
 
 const patchSchema = z.object({
