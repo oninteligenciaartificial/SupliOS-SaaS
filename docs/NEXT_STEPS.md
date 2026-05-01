@@ -104,7 +104,7 @@ Storefront público en `/{slug}/tienda`. La DB ya soporta productos con variante
 - [x] **Rate limiting** — aplicado en `POST /api/registro`.
 - [x] **Transacciones atómicas en órdenes** — `prisma.$transaction([create, ...decrements])`.
 - [x] **Error monitoring (fase 1)** — `reportAsyncError()` en rutas críticas.
-- [x] **Sentry** — `@sentry/nextjs` instalado. Configs: `sentry.client/server/edge.config.ts` + `withSentryConfig` en `next.config.ts`. Activar: agregar `NEXT_PUBLIC_SENTRY_DSN`, `SENTRY_ORG`, `SENTRY_PROJECT` a Vercel.
+- [x] **Sentry** — ✅ Activo en producción. DSN configurado en Vercel. Org: `onia-agency`, proyecto: `javascript-nextjs`. Ver `docs/SENTRY.md`.
 
 ---
 
