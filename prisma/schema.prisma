@@ -16,7 +16,7 @@ enum PlanType {
 enum AddonType {
   WHATSAPP
   FACTURACION
-  MERCADOPAGO
+  QR_BOLIVIA
   ECOMMERCE
   CONTABILIDAD
 }
@@ -94,6 +94,7 @@ model Organization {
   waConversations WaConversation[]
   paymentRequests PaymentRequest[]
   invoices        Invoice[]
+  qrPayments      QrPayment[]
 
   @@map("organizations")
 }
@@ -296,6 +297,7 @@ model Order {
   branch       Branch?      @relation(fields: [branchId], references: [id], onDelete: SetNull)
   items        OrderItem[]
   invoice      Invoice?
+  qrPayments   QrPayment[]
 
   @@map("orders")
 }
@@ -462,4 +464,45 @@ model Invoice {
 
   @@index([organizationId, createdAt])
   @@map("invoices")
+}
+
+// =============================================
+// PAGOS QR BOLIVIA
+// =============================================
+
+enum QrPaymentStatus {
+  PENDIENTE
+  PAGADO
+  EXPIRADO
+  CANCELADO
+  FALLIDO
+}
+
+model QrPayment {
+  id               String          @id @default(cuid())
+  organizationId   String
+  orderId          String
+  provider         String          // "AGGREGATOR" | "QR_SWITCH" | "TIGO" | "BIPAGO"
+  externalId       String          // ID asignado por el PSP
+  qrPayload        String          @db.Text // string EMVCo para renderizar QR cliente
+  qrImageUrl       String?         // URL imagen pre-renderizada (opcional)
+  amount           Decimal         @db.Decimal(10, 2)
+  currency         String          @default("BOB")
+  status           QrPaymentStatus @default(PENDIENTE)
+  expiresAt        DateTime
+  paidAt           DateTime?
+  payerInfo        Json?           // info enmascarada del pagador
+  providerResponse Json?           // respuesta cruda del PSP
+  webhookReceivedAt DateTime?
+  createdAt        DateTime        @default(now())
+  updatedAt        DateTime        @updatedAt
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  order        Order        @relation(fields: [orderId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, externalId])
+  @@index([organizationId, createdAt])
+  @@index([orderId, status])
+  @@index([status, expiresAt])
+  @@map("qr_payments")
 }

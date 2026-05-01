@@ -5,14 +5,14 @@ import { PLAN_META, PLAN_PRICES_BOB, ADDON_META, type PlanType } from "@/lib/pla
 import { Check, QrCode, Copy, MessageCircle, ChevronDown, ChevronUp, Trash2, Zap, X } from "lucide-react";
 
 const PLANS: PlanType[] = ["BASICO", "CRECER", "PRO", "EMPRESARIAL"];
-const ALL_ADDONS = ["WHATSAPP", "FACTURACION", "MERCADOPAGO", "ECOMMERCE", "CONTABILIDAD"] as const;
+const ALL_ADDONS = ["WHATSAPP", "FACTURACION", "QR_BOLIVIA", "ECOMMERCE", "CONTABILIDAD"] as const;
 type AddonType = typeof ALL_ADDONS[number];
 const WA_NUMBER = "59175470140";
 
 const ADDON_WA_MSG: Record<AddonType, string> = {
   WHATSAPP:    "Hola! Me interesa activar el add-on *WhatsApp Business* ($40/mes) en GestiOS. ¿Cómo procedo?",
   FACTURACION: "Hola! Me interesa el add-on de *Facturación SIAT* para Bolivia en GestiOS. ¿Cuándo estará disponible?",
-  MERCADOPAGO: "Hola! Quiero activar el add-on de *Pagos QR Bolivia* ($15/mes) en GestiOS. ¿Cómo procedo?",
+  QR_BOLIVIA: "Hola! Quiero activar el add-on de *Pagos QR Bolivia* ($15/mes) en GestiOS. ¿Cómo procedo?",
   ECOMMERCE:   "Hola! Me interesa el add-on de *E-commerce* ($20/mes) en GestiOS. ¿Cómo procedo?",
   CONTABILIDAD:"Hola! Quiero activar la *Exportación Contable* ($18/mes) en GestiOS. ¿Cómo procedo?",
 };

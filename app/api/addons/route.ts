@@ -5,7 +5,7 @@ import { isPlanAtLeast } from "@/lib/plans";
 import { z } from "zod";
 
 const schema = z.object({
-  addon: z.enum(["WHATSAPP", "FACTURACION", "MERCADOPAGO", "ECOMMERCE", "CONTABILIDAD"]),
+  addon: z.enum(["WHATSAPP", "FACTURACION", "QR_BOLIVIA", "ECOMMERCE", "CONTABILIDAD"]),
   active: z.boolean(),
 });
 

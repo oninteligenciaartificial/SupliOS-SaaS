@@ -6,7 +6,7 @@ export const PLAN_PRICES_BOB: Record<PlanType, number> = {
   PRO: 800,
   EMPRESARIAL: 1250,
 };
-export type AddonType = "WHATSAPP" | "FACTURACION" | "MERCADOPAGO" | "ECOMMERCE" | "CONTABILIDAD";
+export type AddonType = "WHATSAPP" | "FACTURACION" | "QR_BOLIVIA" | "ECOMMERCE" | "CONTABILIDAD";
 
 export const PLAN_META: Record<PlanType, { label: string; price: string; color: string; bg: string }> = {
   BASICO:      { label: "Básico",      price: "$39/mes",  color: "text-brand-muted",          bg: "bg-white/5" },
@@ -25,7 +25,7 @@ export const PLAN_LIMITS: Record<PlanType, { maxProducts: number; maxCustomers: 
 export const ADDON_META: Record<AddonType, { label: string; price: string; description: string; comingSoon?: boolean }> = {
   WHATSAPP:    { label: "WhatsApp Business",    price: "$40/mes", description: "300 conversaciones incluidas, excedente $0.08 c/u" },
   FACTURACION: { label: "Facturación SIAT",    price: "$25/mes", description: "Facturas electrónicas oficiales según el SIN Bolivia",                              comingSoon: true },
-  MERCADOPAGO: { label: "Pagos QR Bolivia",    price: "$15/mes", description: "Acepta pagos con QR bancario, Tigo Money y BiPago",                                 comingSoon: true },
+  QR_BOLIVIA:  { label: "Pagos QR Bolivia",    price: "$15/mes", description: "Acepta pagos con QR bancario, Tigo Money y BiPago",                                 comingSoon: true },
   ECOMMERCE:   { label: "E-commerce",          price: "$20/mes", description: "Conecta tu tienda online y sincroniza inventario automáticamente",                   comingSoon: true },
   CONTABILIDAD: { label: "Exportación Contable", price: "$18/mes", description: "Exporta ventas y gastos en CSV/Excel para tu contador",                           comingSoon: true },
 };
@@ -50,6 +50,7 @@ export const FEATURE_PLAN: Record<string, PlanType> = {
   roles_avanzados:  "EMPRESARIAL",
   audit_log:        "EMPRESARIAL",
   facturacion_siat: "EMPRESARIAL",
+  pagos_qr:         "PRO",
 };
 
 export function canUseFeature(plan: PlanType, feature: string): boolean {

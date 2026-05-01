@@ -6,7 +6,8 @@ PostgreSQL vía Supabase. ORM: Prisma. Fuente de verdad: `prisma/schema.prisma`.
 
 ```
 PlanType:             BASICO | CRECER | PRO | EMPRESARIAL
-AddonType:            WHATSAPP | FACTURACION | MERCADOPAGO | ECOMMERCE | CONTABILIDAD
+AddonType:            WHATSAPP | FACTURACION | QR_BOLIVIA | ECOMMERCE | CONTABILIDAD
+QrPaymentStatus:      PENDIENTE | PAGADO | EXPIRADO | CANCELADO | FALLIDO
 Role:                 SUPERADMIN | ADMIN | MANAGER | STAFF | VIEWER
 OrderStatus:          PENDIENTE | CONFIRMADO | ENVIADO | ENTREGADO | CANCELADO
 PaymentMethod:        EFECTIVO | TARJETA | TRANSFERENCIA

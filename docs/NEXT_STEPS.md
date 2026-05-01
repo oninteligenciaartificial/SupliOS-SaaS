@@ -104,7 +104,7 @@ Storefront público en `/{slug}/tienda`. La DB ya soporta productos con variante
 - [x] **Rate limiting** — aplicado en `POST /api/registro`.
 - [x] **Transacciones atómicas en órdenes** — `prisma.$transaction([create, ...decrements])`.
 - [x] **Error monitoring (fase 1)** — `reportAsyncError()` en rutas críticas.
-- [ ] **Sentry** — fallback automático si se instala `@sentry/nextjs`. Sin instalar aún.
+- [x] **Sentry** — `@sentry/nextjs` instalado. Configs: `sentry.client/server/edge.config.ts` + `withSentryConfig` en `next.config.ts`. Activar: agregar `NEXT_PUBLIC_SENTRY_DSN`, `SENTRY_ORG`, `SENTRY_PROJECT` a Vercel.
 
 ---
 
@@ -126,8 +126,8 @@ Storefront público en `/{slug}/tienda`. La DB ya soporta productos con variante
    ⚠ Requiere bucket `product-images` en Supabase Storage (crear en dashboard, visibility: public)
 7. ✅ Barcode scanner en POS — input de escaneo, busca por barcode o SKU, agrega al carrito directamente (2026-04-29)
 8. ✅ Filtro por sucursal en reportes — param branchId en backend + selector de sucursal en UI (2026-04-29)
-9. [ ] Facturación SIAT Bolivia
-10. [ ] Pagos QR Bolivia
+9. ✅ Facturación SIAT Bolivia — scaffold completo (schema, lib, API, cron). Requiere NIT del cliente + intermediario (FacturAPI Bolivia recomendado). Ver `docs/SIAT-BOLIVIA.md`
+10. ✅ Pagos QR Bolivia — scaffold completo (schema, lib, API, cron). Requiere PSP externo + env vars. Ver `docs/QR-BOLIVIA.md`
 11. ✅ E-commerce storefront — `/{slug}/tienda` catálogo público + carrito + checkout (2026-04-29)
 12. ✅ Emails automáticos — Brevo configurado, 12 tipos de email, 5 cron jobs (2026-04-30)
     - Remitente temporal: `oninteligenciaartificial@gmail.com` (verificado en Brevo)

@@ -23,6 +23,10 @@
     {
       "path": "/api/cron/siat-cufd",
       "schedule": "0 6 * * *"
+    },
+    {
+      "path": "/api/cron/expire-qr",
+      "schedule": "*/5 * * * *"
     }
   ]
 }
