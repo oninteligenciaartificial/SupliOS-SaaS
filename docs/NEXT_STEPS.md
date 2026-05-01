@@ -1,7 +1,11 @@
 # Estado Técnico del Proyecto
 
-Análisis al 2026-04-29. Basado en lectura directa del código y ejecución de herramientas.
+Análisis al 2026-05-01. Basado en lectura directa del código y ejecución de herramientas.
 Ver análisis detallado en `docs/ANALYSIS.md`.
+
+**Últimas actualizaciones (2026-05-01):**
+- ✅ Staff management: CRUD + roles + UI completa en `/dashboard/staff`
+- ✅ Test coverage: 94 tests pasando (era 31) — +54 tests nuevos
 
 ---
 
