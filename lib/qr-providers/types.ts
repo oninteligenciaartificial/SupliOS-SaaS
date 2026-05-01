@@ -9,26 +9,13 @@ export interface QrCreateInput {
   callbackUrl: string;
 }
 
-export interface QrCreateResult {
-  ok: true;
-  externalId: string;
-  qrPayload: string;
-  qrImageUrl?: string;
-} | {
-  ok: false;
-  error: string;
-}
+export type QrCreateResult =
+  | { ok: true; externalId: string; qrPayload: string; qrImageUrl?: string }
+  | { ok: false; error: string };
 
-export interface QrStatusResult {
-  ok: true;
-  status: "PENDIENTE" | "PAGADO" | "EXPIRADO" | "CANCELADO" | "FALLIDO";
-  paidAt?: string;
-  payerInfo?: Record<string, unknown>;
-  raw?: unknown;
-} | {
-  ok: false;
-  error: string;
-}
+export type QrStatusResult =
+  | { ok: true; status: "PENDIENTE" | "PAGADO" | "EXPIRADO" | "CANCELADO" | "FALLIDO"; paidAt?: string; payerInfo?: Record<string, unknown>; raw?: unknown }
+  | { ok: false; error: string };
 
 export interface QrCancelResult {
   ok: boolean;

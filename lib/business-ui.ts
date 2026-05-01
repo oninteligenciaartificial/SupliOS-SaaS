@@ -2,19 +2,25 @@ import type { BusinessType } from "./business-types";
 
 export interface BusinessUIConfig {
   // Labels generales
-  productSingular: string;       // "Producto" | "Prenda" | "Suplemento" | ...
-  productPlural: string;         // "Productos" | "Prendas" | ...
-  categoryLabel: string;         // "Categoría" | "Colección" | "Línea" | "Marca" | "Laboratorio" | "Área"
-  skuLabel: string;              // "SKU" | "Referencia" | "Modelo" | "Código"
-  unitLabel: string;             // "Unidad" siempre pero con sugerencias distintas
-  stockLabel: string;            // "Stock" | "Unidades" | "Stock"
-  variantLabel: string;          // "Variante" | "Talla / Color" | "Sabor / Peso" | ...
-  supplierLabel: string;         // "Proveedor" | "Marca / Proveedor" | ...
+  productSingular: string;
+  productPlural: string;
+  categoryLabel: string;
+  skuLabel: string;
+  unitLabel: string;
+  stockLabel: string;
+  variantLabel: string;
+  supplierLabel: string;
 
   // Placeholders
   searchPlaceholder: string;
   namePlaceholder: string;
   unitPlaceholder: string;
+
+  // Opciones de unidad de medida específicas por tipo de negocio
+  unitOptions: string[];
+
+  // Placeholders por atributo de variante (clave = nombre del atributo en minúsculas)
+  attrPlaceholders: Record<string, string>;
 
   // Visibilidad de campos en el formulario
   showBatchExpiry: boolean;      // prominente para FARMACIA y SUPLEMENTOS
@@ -28,8 +34,8 @@ export interface BusinessUIConfig {
   emptyStateMessage: string;
 
   // Textos en POS
-  posProductLabel: string;       // label en el carrito
-  posVariantHint: string;        // hint debajo del nombre de variante
+  posProductLabel: string;
+  posVariantHint: string;
 }
 
 const CONFIGS: Record<BusinessType, BusinessUIConfig> = {
@@ -45,6 +51,8 @@ const CONFIGS: Record<BusinessType, BusinessUIConfig> = {
     searchPlaceholder: "Buscar por nombre o SKU...",
     namePlaceholder: "Nombre del producto",
     unitPlaceholder: "ej: kg, litro, caja",
+    unitOptions: ["pieza", "kg", "g", "litro", "ml", "caja", "sobre", "frasco", "metro", "rollo", "par"],
+    attrPlaceholders: {},
     showBatchExpiry: false,
     showBarcode: true,
     showUnit: true,
@@ -67,6 +75,8 @@ const CONFIGS: Record<BusinessType, BusinessUIConfig> = {
     searchPlaceholder: "Buscar por nombre o referencia...",
     namePlaceholder: "ej: Camiseta Polo, Jeans Slim Fit",
     unitPlaceholder: "ej: par, unidad",
+    unitOptions: ["pieza", "par", "set", "pack"],
+    attrPlaceholders: { talla: "ej: S, M, L, XL, 38, 40", color: "ej: Negro, Blanco, Azul" },
     showBatchExpiry: false,
     showBarcode: true,
     showUnit: false,
@@ -82,13 +92,15 @@ const CONFIGS: Record<BusinessType, BusinessUIConfig> = {
     productPlural: "Suplementos",
     categoryLabel: "Línea",
     skuLabel: "Código",
-    unitLabel: "Unidad",
+    unitLabel: "Presentación",
     stockLabel: "Stock",
     variantLabel: "Sabor / Peso",
     supplierLabel: "Marca / Proveedor",
     searchPlaceholder: "Buscar por nombre o código...",
     namePlaceholder: "ej: Whey Protein, Creatina Monohidrato",
     unitPlaceholder: "ej: lb, kg, sobre",
+    unitOptions: ["lb", "kg", "g", "sobre", "cápsula", "tableta", "frasco", "sachet"],
+    attrPlaceholders: { sabor: "ej: Chocolate, Vainilla, Fresa", peso: "ej: 1 lb, 2 lb, 5 lb" },
     showBatchExpiry: true,
     showBarcode: true,
     showUnit: true,
@@ -111,6 +123,8 @@ const CONFIGS: Record<BusinessType, BusinessUIConfig> = {
     searchPlaceholder: "Buscar por nombre o modelo...",
     namePlaceholder: "ej: Auriculares Bluetooth, Cargador USB-C",
     unitPlaceholder: "ej: unidad, kit",
+    unitOptions: ["unidad", "kit", "par", "pack"],
+    attrPlaceholders: { capacidad: "ej: 64GB, 128GB, 256GB", color: "ej: Negro, Blanco, Gris" },
     showBatchExpiry: false,
     showBarcode: true,
     showUnit: true,
@@ -126,13 +140,15 @@ const CONFIGS: Record<BusinessType, BusinessUIConfig> = {
     productPlural: "Medicamentos",
     categoryLabel: "Laboratorio",
     skuLabel: "Código",
-    unitLabel: "Unidad",
+    unitLabel: "Presentación",
     stockLabel: "Stock",
     variantLabel: "Presentación / Dosis",
     supplierLabel: "Laboratorio / Proveedor",
     searchPlaceholder: "Buscar por nombre o código...",
     namePlaceholder: "ej: Paracetamol 500mg, Ibuprofeno",
     unitPlaceholder: "ej: caja, frasco, blíster",
+    unitOptions: ["caja", "frasco", "blíster", "ampolla", "sobre", "tableta", "cápsula", "ml", "mg"],
+    attrPlaceholders: { presentación: "ej: Caja x10, Frasco x30", dosis: "ej: 500mg, 1g" },
     showBatchExpiry: true,
     showBarcode: true,
     showUnit: true,
@@ -155,6 +171,8 @@ const CONFIGS: Record<BusinessType, BusinessUIConfig> = {
     searchPlaceholder: "Buscar por nombre o código...",
     namePlaceholder: "ej: Tornillo 3/8, Cable eléctrico",
     unitPlaceholder: "ej: metro, kg, unidad, rollo",
+    unitOptions: ["unidad", "metro", "kg", "g", "litro", "rollo", "par", "kit", "caja"],
+    attrPlaceholders: { medida: "ej: 1/4\", 3/8\", 10mm", material: "ej: Acero, Madera, PVC" },
     showBatchExpiry: false,
     showBarcode: true,
     showUnit: true,

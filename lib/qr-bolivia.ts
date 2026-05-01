@@ -32,11 +32,11 @@ export async function generateQR(
 
   const addon = await prisma.orgAddon.findUnique({
     where: { organizationId_addon: { organizationId, addon: "QR_BOLIVIA" } },
-    select: { active: true, config: true },
+    select: { active: true },
   });
   if (!addon?.active) return { ok: false, error: "Addon QR_BOLIVIA no activo" };
 
-  const config = (addon.config ?? {}) as Record<string, string>;
+  const config: Record<string, string> = {};
   const provider = getProvider(config.provider);
 
   const expiresAt = new Date(Date.now() + DEFAULT_EXPIRY_MINUTES * 60 * 1000);

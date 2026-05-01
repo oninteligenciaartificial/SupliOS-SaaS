@@ -74,18 +74,10 @@ export function ProductFormModal({
                 <Field label={ui.unitLabel}>
                   <select value={form.unit} onChange={(e) => onFormChange({ ...form, unit: e.target.value })} className={inputCls}>
                     <option value="">Sin especificar</option>
-                    <option value="pieza">Pieza</option>
-                    <option value="kg">Kilogramo (kg)</option>
-                    <option value="g">Gramo (g)</option>
-                    <option value="litro">Litro</option>
-                    <option value="ml">Mililitro (ml)</option>
-                    <option value="capsula">Cápsula</option>
-                    <option value="tableta">Tableta</option>
-                    <option value="sobre">Sobre</option>
-                    <option value="frasco">Frasco</option>
-                    <option value="metro">Metro</option>
-                    <option value="rollo">Rollo</option>
-                    <option value="par">Par</option>
+                    {ui.unitOptions.map((opt) => (
+                      <option key={opt} value={opt}>{opt.charAt(0).toUpperCase() + opt.slice(1)}</option>
+                    ))}
+                    <option value="otro">Otro</option>
                   </select>
                 </Field>
               )}
@@ -142,12 +134,14 @@ export function ProductFormModal({
               </Field>
             )}
 
-            <div className={ui.showBatchExpiry ? "p-3 rounded-xl bg-yellow-500/5 border border-yellow-500/20" : ""}>
-              <Field label={ui.showBatchExpiry ? "⚠ Fecha de vencimiento del lote *" : "Fecha vencimiento del lote"}>
-                <input type="date" value={form.batchExpiry} onChange={(e) => onFormChange({ ...form, batchExpiry: e.target.value })} className={inputCls} />
-              </Field>
-              {ui.showBatchExpiry && <p className="text-xs text-yellow-500/70 mt-1.5">Obligatorio para control de vencimientos y alertas automáticas.</p>}
-            </div>
+            {(ui.showBatchExpiry || form.batchExpiry) && (
+              <div className={ui.showBatchExpiry ? "p-3 rounded-xl bg-yellow-500/5 border border-yellow-500/20" : ""}>
+                <Field label={ui.showBatchExpiry ? "⚠ Fecha de vencimiento del lote" : "Fecha vencimiento del lote"}>
+                  <input type="date" value={form.batchExpiry} onChange={(e) => onFormChange({ ...form, batchExpiry: e.target.value })} className={inputCls} />
+                </Field>
+                {ui.showBatchExpiry && <p className="text-xs text-yellow-500/70 mt-1.5">Registra la fecha de vencimiento del lote para alertas automáticas.</p>}
+              </div>
+            )}
 
             <Field label="Imagen del producto">
               <input ref={imageInputRef} type="file" accept="image/jpeg,image/png,image/webp,image/gif" className="hidden" onChange={onImageUpload} />
@@ -245,7 +239,7 @@ export function ProductFormModal({
                               value={variantAttrs[key] ?? ""}
                               onChange={(e) => onVariantAttrsChange({ ...variantAttrs, [key]: e.target.value })}
                               className={inputCls}
-                              placeholder={`Ej: ${key === "color" ? "Rojo" : key === "sabor" ? "Chocolate" : "..."}`}
+                              placeholder={ui.attrPlaceholders[key] ?? `Ej: ${key}`}
                             />
                           )}
                         </Field>
