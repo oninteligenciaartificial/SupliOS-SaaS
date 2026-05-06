@@ -43,10 +43,10 @@ export default async function Dashboard() {
   const lowStockAlerts = allProducts.filter((p: StockItem) => p.stock <= p.minStock).slice(0, 5);
 
   const kpis = [
-    { title: "Inventario Total",  value: String(totalProducts),           label: "SKUs Activos",    icon: Package,       color: "text-brand-kinetic-orange" },
-    { title: "Pedidos Semana",    value: String(weeklyOrders),             label: "Ultimos 7 dias",  icon: ShoppingCart,  color: "text-white"                },
-    { title: "Alertas Stock",     value: String(lowStockAlerts.length),    label: "Reabastecer Ya",  icon: AlertTriangle, color: "text-red-400"              },
-    { title: "Ingresos",          value: `$${monthlyRevenue.toLocaleString("es-MX")}`, label: "Mensual", icon: DollarSign, color: "text-brand-growth-neon" },
+    { title: "Inventario Total",  value: String(totalProducts),                  label: "SKUs Activos",    icon: Package,       color: "text-brand-kinetic-orange" },
+    { title: "Pedidos Semana",    value: String(weeklyOrders),                    label: "Ultimos 7 dias",  icon: ShoppingCart,  color: "text-white"                },
+    { title: "Alertas Stock",     value: String(lowStockAlerts.length),           label: "Reabastecer Ya",  icon: AlertTriangle, color: "text-red-400"              },
+    { title: "Ingresos",          value: `Bs. ${monthlyRevenue.toLocaleString("es-MX", { minimumFractionDigits: 2 })}`, label: "Mensual", icon: DollarSign, color: "text-brand-growth-neon" },
   ];
 
   return (

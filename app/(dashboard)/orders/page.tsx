@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
-import { ShoppingCart, Plus, X, Search, ChevronDown, Printer, Eye } from "lucide-react";
+import { ShoppingCart, Plus, X, Search, ChevronDown, Printer, Eye, Clock, CheckCircle, Truck, ShoppingBag, Ban } from "lucide-react";
 
 type OrderStatus = "PENDIENTE" | "CONFIRMADO" | "ENVIADO" | "ENTREGADO" | "CANCELADO";
 
@@ -19,6 +19,13 @@ interface Order {
   customer: Customer | null;
 }
 
+const STATUS_ICONS: Record<OrderStatus, React.ReactNode> = {
+  PENDIENTE: <Clock size={11} />,
+  CONFIRMADO: <CheckCircle size={11} />,
+  ENVIADO: <Truck size={11} />,
+  ENTREGADO: <ShoppingBag size={11} />,
+  CANCELADO: <Ban size={11} />,
+};
 const STATUS_LABELS: Record<OrderStatus, string> = {
   PENDIENTE: "Pendiente", CONFIRMADO: "Confirmado", ENVIADO: "Enviado",
   ENTREGADO: "Entregado", CANCELADO: "Cancelado",
@@ -124,7 +131,7 @@ export default function OrdersPage() {
     const win = window.open("", "_blank", "width=400,height=600");
     if (!win) return;
     const lines = order.items.map((i) =>
-      `<tr><td>${i.product.name}</td><td style="text-align:center">${i.quantity}</td><td style="text-align:right">$${fmt(i.quantity * Number(i.unitPrice))}</td></tr>`
+      `<tr><td>${i.product.name}</td><td style="text-align:center">${i.quantity}</td><td style="text-align:right">Bs. ${fmt(i.quantity * Number(i.unitPrice))}</td></tr>`
     ).join("");
     win.document.write(`
       <html><head><title>Ticket</title>
@@ -135,7 +142,7 @@ export default function OrdersPage() {
       <p>Cliente: <strong>${order.customerName}</strong></p>
       <table><thead><tr><th>Producto</th><th style="text-align:center">Cant.</th><th style="text-align:right">Subtotal</th></tr></thead>
       <tbody>${lines}</tbody>
-      <tfoot><tr><td colspan="2">TOTAL</td><td style="text-align:right">$${fmt(Number(order.total))}</td></tr></tfoot>
+      <tfoot><tr><td colspan="2">TOTAL</td><td style="text-align:right">Bs. {fmt(Number(order.total))}</td></tr></tfoot>
       </table>
       ${order.notes ? `<p style="margin-top:12px;font-style:italic">${order.notes}</p>` : ""}
       <div class="footer">Gracias por su compra</div>
@@ -203,8 +210,8 @@ export default function OrdersPage() {
                       <div className="text-xs text-brand-muted font-mono">{o.id.slice(0, 8)}…</div>
                     </td>
                     <td className="p-4 text-brand-muted text-sm">{o.items.length}</td>
-                    <td className="p-4 font-bold text-white text-sm">${fmt(Number(o.total))}</td>
-                    <td className="p-4"><span className={`px-2.5 py-1 rounded-full text-xs font-bold ${STATUS_COLORS[o.status]}`}>{STATUS_LABELS[o.status]}</span></td>
+                    <td className="p-4 font-bold text-white text-sm">Bs. {fmt(Number(o.total))}</td>
+                    <td className="p-4"><span className={`px-2.5 py-1 rounded-full text-xs font-bold flex items-center gap-1.5 ${STATUS_COLORS[o.status]}`}>{STATUS_ICONS[o.status]}{STATUS_LABELS[o.status]}</span></td>
                     <td className="p-4 text-brand-muted text-xs">{new Date(o.createdAt).toLocaleDateString("es-MX")}</td>
                     <td className="p-4" onClick={(e) => e.stopPropagation()}>
                       <div className="relative">
@@ -238,12 +245,12 @@ export default function OrdersPage() {
                     <div className="font-bold text-white truncate">{o.customerName}</div>
                     <div className="text-xs text-brand-muted">{new Date(o.createdAt).toLocaleString("es-MX", { dateStyle: "short", timeStyle: "short" })}</div>
                   </div>
-                  <span className={`px-2.5 py-1 rounded-full text-xs font-bold flex-shrink-0 ${STATUS_COLORS[o.status]}`}>{STATUS_LABELS[o.status]}</span>
+                  <span className={`px-2.5 py-1 rounded-full text-xs font-bold flex items-center gap-1.5 flex-shrink-0 ${STATUS_COLORS[o.status]}`}>{STATUS_ICONS[o.status]}{STATUS_LABELS[o.status]}</span>
                 </div>
                 <div className="flex items-center justify-between">
                   <div className="flex gap-4 text-sm">
                     <span className="text-brand-muted">{o.items.length} items</span>
-                    <span className="font-bold text-brand-kinetic-orange">${fmt(Number(o.total))}</span>
+                    <span className="font-bold text-brand-kinetic-orange">Bs. {fmt(Number(o.total))}</span>
                   </div>
                   <div className="flex gap-2" onClick={(e) => e.stopPropagation()}>
                     <button onClick={() => { printTicket(o); }} className="p-2 rounded-lg bg-white/5 text-brand-muted hover:text-white transition-colors"><Printer size={14} /></button>
@@ -293,9 +300,9 @@ export default function OrdersPage() {
                 <div key={i} className="flex items-center justify-between p-3 rounded-xl bg-white/5">
                   <div>
                     <div className="text-sm font-medium text-white">{item.product.name}</div>
-                    <div className="text-xs text-brand-muted">{item.quantity} × ${fmt(Number(item.unitPrice))}</div>
+                    <div className="text-xs text-brand-muted">{item.quantity} × Bs. {fmt(Number(item.unitPrice))}</div>
                   </div>
-                  <div className="font-bold text-white text-sm">${fmt(item.quantity * Number(item.unitPrice))}</div>
+                  <div className="font-bold text-white text-sm">Bs. {fmt(item.quantity * Number(item.unitPrice))}</div>
                 </div>
               ))}
             </div>
@@ -309,7 +316,7 @@ export default function OrdersPage() {
 
             <div className="flex justify-between items-center pt-3 border-t border-white/10">
               <span className="text-brand-muted">Total</span>
-              <span className="text-2xl font-display font-bold text-brand-kinetic-orange">${fmt(Number(detailOrder.total))}</span>
+              <span className="text-2xl font-display font-bold text-brand-kinetic-orange">Bs. {fmt(Number(detailOrder.total))}</span>
             </div>
 
             <div className="grid grid-cols-2 gap-2 pt-1">
@@ -379,7 +386,7 @@ export default function OrdersPage() {
               </div>
               <div className="flex justify-between items-center py-3 border-t border-white/10">
                 <span className="text-brand-muted text-sm">Total</span>
-                <span className="text-2xl font-display font-bold text-white">${fmt(orderTotal)}</span>
+                <span className="text-2xl font-display font-bold text-white">Bs. {fmt(orderTotal)}</span>
               </div>
               {error && <p className="text-red-400 text-sm">{error}</p>}
               <button type="submit" disabled={saving} className="w-full py-3 rounded-xl bg-gradient-to-br from-brand-kinetic-orange to-brand-kinetic-orange-light text-black font-bold disabled:opacity-50">

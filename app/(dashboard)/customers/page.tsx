@@ -284,7 +284,7 @@ export default function CustomersPage() {
                     <div className="text-xs text-brand-muted">Pedidos</div>
                   </div>
                   <div className="glass-panel p-3 rounded-xl text-center">
-                    <div className="text-lg font-bold text-brand-kinetic-orange">${fmt(customerOrders.filter(o => o.status !== "CANCELADO").reduce((s, o) => s + Number(o.total), 0))}</div>
+                    <div className="text-lg font-bold text-brand-kinetic-orange">Bs. {fmt(customerOrders.filter(o => o.status !== "CANCELADO").reduce((s, o) => s + Number(o.total), 0))}</div>
                     <div className="text-xs text-brand-muted">Total gastado</div>
                   </div>
                   <div className="glass-panel p-3 rounded-xl text-center">
@@ -301,13 +301,13 @@ export default function CustomersPage() {
                           <span className={`px-2.5 py-0.5 rounded-full text-xs font-bold ${STATUS_COLORS[o.status] ?? "bg-white/10 text-brand-muted"}`}>{STATUS_LABELS[o.status] ?? o.status}</span>
                           <span className="text-xs text-brand-muted">{new Date(o.createdAt).toLocaleDateString("es-MX")}</span>
                         </div>
-                        <span className="font-bold text-white text-sm">${fmt(Number(o.total))}</span>
+                        <span className="font-bold text-white text-sm">Bs. {fmt(Number(o.total))}</span>
                       </div>
                       <div className="text-xs text-brand-muted space-y-0.5">
                         {o.items.map((item, i) => (
                           <div key={i} className="flex justify-between">
                             <span>{item.product.name}</span>
-                            <span>{item.quantity} × ${fmt(Number(item.unitPrice))}</span>
+                            <span>{item.quantity} × Bs. {fmt(Number(item.unitPrice))}</span>
                           </div>
                         ))}
                       </div>

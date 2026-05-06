@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { getBusinessUI } from "@/lib/business-ui";
 import type { BusinessType } from "@/lib/business-types";
-import { Search, Plus, Minus, Trash2, ShoppingCart, CheckCircle, X, Tag, ChevronUp, Layers, Star, Barcode, QrCode } from "lucide-react";
+import { Search, Plus, Minus, Trash2, ShoppingCart, CheckCircle, X, Tag, ChevronUp, Layers, Star, Barcode, QrCode, Banknote, CreditCard, Landmark } from "lucide-react";
 import { QrPaymentModal } from "./QrPaymentModal";
 import { canUseFeature, canUseAddon } from "@/lib/plans";
 import type { PlanType, AddonType } from "@/lib/plans";
@@ -299,7 +299,7 @@ export default function POSPage() {
             },
           } : {}),
         })),
-        notes: appliedDiscount ? `Descuento: ${appliedDiscount.code} (-$${fmt(discountAmount)})` : undefined,
+        notes: appliedDiscount ? `Descuento: ${appliedDiscount.code} (-Bs.${fmt(discountAmount)})` : undefined,
       }),
     });
     setSelling(false);
@@ -336,7 +336,7 @@ export default function POSPage() {
                   {item.variantLabel && (
                     <div className="text-xs text-blue-400 truncate">{item.variantLabel}</div>
                   )}
-                  <div className="text-xs text-brand-muted">${fmt(item.effectivePrice)} c/u</div>
+                  <div className="text-xs text-brand-muted">Bs. {fmt(item.effectivePrice)} c/u</div>
                 </div>
                 <div className="flex items-center gap-1.5">
                   <button onClick={() => updateQty(key, -1)} className="w-7 h-7 rounded-full bg-white/10 text-white flex items-center justify-center hover:bg-white/20 transition-colors">
@@ -347,7 +347,7 @@ export default function POSPage() {
                     <Plus size={12} />
                   </button>
                 </div>
-                <div className="text-sm font-bold text-white w-16 text-right">${fmt(item.qty * item.effectivePrice)}</div>
+                <div className="text-sm font-bold text-white w-16 text-right">Bs. {fmt(item.qty * item.effectivePrice)}</div>
                 <button onClick={() => removeFromCart(key)} className="text-brand-muted hover:text-red-400 transition-colors ml-1">
                   <Trash2 size={13} />
                 </button>
@@ -419,8 +419,11 @@ export default function POSPage() {
         <div className="grid grid-cols-3 gap-1.5">
           {(["EFECTIVO", "TARJETA", "TRANSFERENCIA"] as const).map((m) => (
             <button key={m} type="button" onClick={() => setPaymentMethod(m)}
-              className={`py-2 rounded-xl text-xs font-bold transition-colors ${paymentMethod === m ? "bg-brand-kinetic-orange text-black" : "bg-white/5 text-brand-muted hover:text-white"}`}>
-              {m === "EFECTIVO" ? "💵 Efectivo" : m === "TARJETA" ? "💳 Tarjeta" : "📲 Transfer."}
+              className={`py-2 rounded-xl text-xs font-bold transition-colors flex items-center justify-center gap-1.5 ${paymentMethod === m ? "bg-brand-kinetic-orange text-black" : "bg-white/5 text-brand-muted hover:text-white"}`}>
+              {m === "EFECTIVO" && <Banknote size={14} />}
+              {m === "TARJETA" && <CreditCard size={14} />}
+              {m === "TRANSFERENCIA" && <Landmark size={14} />}
+              {m === "EFECTIVO" ? "Efectivo" : m === "TARJETA" ? "Tarjeta" : "Transfer."}
             </button>
           ))}
         </div>
@@ -464,22 +467,22 @@ export default function POSPage() {
 
         <div className="space-y-1.5 pt-1">
           <div className="flex justify-between text-sm text-brand-muted">
-            <span>Subtotal</span><span>${fmt(subtotal)}</span>
+            <span>Subtotal</span><span>Bs. {fmt(subtotal)}</span>
           </div>
           {appliedDiscount && (
             <div className="flex justify-between text-sm text-brand-growth-neon">
-              <span>Descuento</span><span>-${fmt(discountAmount)}</span>
+              <span>Descuento</span><span>-Bs. {fmt(discountAmount)}</span>
             </div>
           )}
           {pointsDiscount > 0 && (
             <div className="flex justify-between text-sm text-yellow-400">
               <span className="flex items-center gap-1"><Star size={11} /> {pointsToRedeem} puntos</span>
-              <span>-${fmt(pointsDiscount)}</span>
+              <span>-Bs. {fmt(pointsDiscount)}</span>
             </div>
           )}
           <div className="flex justify-between text-xl font-bold text-white pt-1 border-t border-white/10">
             <span>Total</span>
-            <span className="text-brand-kinetic-orange">${fmt(total)}</span>
+            <span className="text-brand-kinetic-orange">Bs. {fmt(total)}</span>
           </div>
         </div>
 
@@ -493,7 +496,7 @@ export default function POSPage() {
             disabled={cart.length === 0 || selling}
             className="w-full py-4 rounded-xl bg-gradient-to-br from-brand-kinetic-orange to-brand-kinetic-orange-light text-black font-bold text-lg disabled:opacity-40 shadow-[0_0_25px_rgba(255,107,0,0.3)] hover:shadow-[0_0_35px_rgba(255,107,0,0.5)] transition-all"
           >
-            {selling ? "Procesando..." : `Cobrar $${fmt(total)}`}
+            {selling ? "Procesando..." : `Cobrar Bs. ${fmt(total)}`}
           </button>
         )}
       </div>
@@ -544,7 +547,7 @@ export default function POSPage() {
                           <span className="text-sm text-white">{label}</span>
                           <span className="block text-xs text-brand-muted">Stock: {v.stock}{qtyInCart > 0 && ` · En carrito: ${qtyInCart}`}</span>
                         </div>
-                        <span className="text-sm font-bold text-brand-kinetic-orange">${fmt(price)}</span>
+                        <span className="text-sm font-bold text-brand-kinetic-orange">Bs. {fmt(price)}</span>
                       </button>
                     );
                   })}
@@ -618,7 +621,7 @@ export default function POSPage() {
                         {p.hasVariants && <Layers size={12} className="text-blue-400 flex-shrink-0" />}
                       </div>
                       {p.category && <div className="text-xs text-brand-muted mb-2">{p.category.name}</div>}
-                      <div className="text-brand-kinetic-orange font-bold text-lg">${fmt(Number(p.price))}</div>
+                      <div className="text-brand-kinetic-orange font-bold text-lg">Bs. {fmt(Number(p.price))}</div>
                       <div className={`text-xs mt-1 ${outOfStock ? "text-red-400" : p.hasVariants ? "text-blue-400" : p.stock <= p.minStock ? "text-yellow-400" : "text-brand-muted"}`}>
                         {p.hasVariants
                           ? `${(p.variants ?? []).filter((v) => v.stock > 0).length} variantes disponibles`
@@ -685,7 +688,7 @@ export default function POSPage() {
                       {p.hasVariants && <Layers size={11} className="text-blue-400 flex-shrink-0" />}
                     </div>
                     {p.category && <div className="text-xs text-brand-muted mb-1.5">{p.category.name}</div>}
-                    <div className="text-brand-kinetic-orange font-bold">${fmt(Number(p.price))}</div>
+                    <div className="text-brand-kinetic-orange font-bold">Bs. {fmt(Number(p.price))}</div>
                     <div className={`text-xs mt-0.5 ${outOfStock ? "text-red-400" : p.hasVariants ? "text-blue-400" : p.stock <= p.minStock ? "text-yellow-400" : "text-brand-muted"}`}>
                       {p.hasVariants
                         ? `${(p.variants ?? []).filter((v) => v.stock > 0).length} variantes`
@@ -703,14 +706,14 @@ export default function POSPage() {
           <div className="fixed bottom-0 left-0 right-0 p-4 z-30">
             <button
               onClick={() => setCartOpen(true)}
-              className="w-full py-4 rounded-2xl bg-gradient-to-br from-brand-kinetic-orange to-brand-kinetic-orange-light text-black font-bold text-base flex items-center justify-between px-5 shadow-[0_0_30px_rgba(255,107,0,0.4)]"
+              className="w-full py-4 rounded-2xl bg-gradient-to-br from-brand-kinetic-orange to-brand-kinetic-orange-light text-black font-bold text-base flex items-center justify-between px-5 shadow-[0_0_30px_rgba(255,107,0,0.4)] active:scale-[0.98] transition-transform"
             >
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2.5">
                 <ShoppingCart size={18} />
-                <span className="w-6 h-6 rounded-full bg-black/20 text-xs font-bold flex items-center justify-center">{totalItems}</span>
+                <span className="bg-black/20 text-xs font-bold px-2 py-0.5 rounded-full">{totalItems}</span>
+                <span className="font-semibold text-sm">Ver carrito</span>
               </div>
-              <span>Ver carrito</span>
-              <span>${fmt(total)}</span>
+              <span className="font-bold">Bs. {fmt(total)}</span>
             </button>
           </div>
         )}

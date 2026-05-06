@@ -40,10 +40,10 @@ export default function CajaPage() {
     const win = window.open("", "_blank", "width=500,height=700");
     if (!win) return;
     const rows = data.orders.map((o) =>
-      `<tr><td>${o.customerName}</td><td style="text-align:center">${o.items}</td><td style="text-align:right">$${fmt(o.total)}</td><td>${o.status}</td></tr>`
+      `<tr><td>${o.customerName}</td><td style="text-align:center">${o.items}</td><td style="text-align:right">Bs. ${fmt(o.total)}</td><td>${o.status}</td></tr>`
     ).join("");
     const top = data.topProducts.map((p) =>
-      `<tr><td>${p.name}</td><td style="text-align:center">${p.qty}</td><td style="text-align:right">$${fmt(p.revenue)}</td></tr>`
+      `<tr><td>${p.name}</td><td style="text-align:center">${p.qty}</td><td style="text-align:right">Bs. ${fmt(p.revenue)}</td></tr>`
     ).join("");
     win.document.write(`<html><head><title>Corte de Caja</title>
     <style>body{font-family:monospace;font-size:13px;margin:20px}h2,h3{text-align:center}table{width:100%;border-collapse:collapse;margin-top:8px}th,td{padding:4px 6px;text-align:left}th{border-bottom:1px solid #ccc}.kpi{display:flex;justify-content:space-between;margin:4px 0}.total{font-size:18px;font-weight:bold;text-align:right}.sep{border-top:2px solid #333;margin:12px 0}</style>
@@ -51,9 +51,9 @@ export default function CajaPage() {
     <h2>Corte de Caja</h2>
     <p style="text-align:center">${new Date(data.date).toLocaleDateString("es-MX", { weekday:"long", year:"numeric", month:"long", day:"numeric" })}</p>
     <div class="sep"></div>
-    <div class="kpi"><span>Total Ventas:</span><span class="total">$${fmt(data.totalRevenue)}</span></div>
+    <div className="kpi"><span>Total Ventas:</span><span class="total">Bs. {fmt(data.totalRevenue)}</span></div>
     <div class="kpi"><span>Pedidos:</span><span>${data.totalOrders}</span></div>
-    <div class="kpi"><span>Ticket promedio:</span><span>$${fmt(data.avgTicket)}</span></div>
+    <div class="kpi"><span>Ticket promedio:</span><span>Bs. {fmt(data.avgTicket)}</span></div>
     <div class="kpi"><span>Cancelados:</span><span>${data.cancelled}</span></div>
     <div class="sep"></div>
     <h3>Top Productos</h3>
@@ -91,9 +91,9 @@ export default function CajaPage() {
           {/* KPIs */}
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4 animate-pop">
             {[
-              { label: "Ingresos del dia", value: `$${fmt(data.totalRevenue)}`, icon: DollarSign, color: "text-brand-growth-neon" },
+              { label: "Ingresos del dia", value: `Bs. ${fmt(data.totalRevenue)}`, icon: DollarSign, color: "text-brand-growth-neon" },
               { label: "Pedidos", value: data.totalOrders, icon: ShoppingCart, color: "text-blue-400" },
-              { label: "Ticket promedio", value: `$${fmt(data.avgTicket)}`, icon: TrendingUp, color: "text-brand-kinetic-orange" },
+              { label: "Ticket promedio", value: `Bs. ${fmt(data.avgTicket)}`, icon: TrendingUp, color: "text-brand-kinetic-orange" },
               { label: "Cancelados", value: data.cancelled, icon: XCircle, color: "text-red-400" },
             ].map(({ label, value, icon: Icon, color }) => (
               <div key={label} className="glass-panel p-5 rounded-2xl">
@@ -121,7 +121,7 @@ export default function CajaPage() {
                       <div key={i}>
                         <div className="flex justify-between text-sm mb-1">
                           <span className="text-white font-medium truncate pr-4">{p.name}</span>
-                          <span className="text-brand-muted flex-shrink-0">{p.qty} uds · ${fmt(p.revenue)}</span>
+                          <span className="text-brand-muted flex-shrink-0">{p.qty} uds · Bs. {fmt(p.revenue)}</span>
                         </div>
                         <div className="h-1.5 rounded-full bg-white/5">
                           <div className="h-full rounded-full bg-brand-kinetic-orange" style={{ width: `${pct}%` }} />
@@ -150,7 +150,7 @@ export default function CajaPage() {
                         <div className="text-xs text-brand-muted">{new Date(o.createdAt).toLocaleTimeString("es-MX", { hour: "2-digit", minute: "2-digit" })}</div>
                       </div>
                       <div className="text-right">
-                        <div className="text-sm font-bold text-white">${fmt(o.total)}</div>
+                        <div className="text-sm font-bold text-white">Bs. {fmt(o.total)}</div>
                         <div className="text-xs text-brand-muted">{o.items} item{o.items !== 1 ? "s" : ""}</div>
                       </div>
                     </div>

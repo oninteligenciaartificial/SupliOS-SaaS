@@ -210,7 +210,7 @@ export function ProductFormModal({
                             </p>
                             <p className="text-xs text-brand-muted">
                               Stock: {v.stock}
-                              {v.price && ` · $${Number(v.price).toFixed(2)}`}
+                              {v.price && ` · Bs. ${Number(v.price).toFixed(2)}`}
                               {v.sku && ` · ${v.sku}`}
                             </p>
                           </div>
