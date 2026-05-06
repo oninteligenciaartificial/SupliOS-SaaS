@@ -26,7 +26,7 @@
     },
     {
       "path": "/api/cron/expire-qr",
-      "schedule": "*/5 * * * *"
+      "schedule": "0 0 * * *"
     }
   ]
 }

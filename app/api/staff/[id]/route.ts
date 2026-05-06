@@ -11,7 +11,7 @@ const updateStaffSchema = z.object({
 
 export async function PATCH(
   request: Request,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   const profile = await getTenantProfile();
   if (!profile) return NextResponse.json({ error: "No autorizado" }, { status: 401 });
@@ -19,7 +19,7 @@ export async function PATCH(
     return NextResponse.json({ error: "Sin permiso" }, { status: 403 });
   }
 
-  const staffId = params.id;
+  const { id: staffId } = await params;
   const staff = await prisma.profile.findUnique({
     where: { id: staffId },
   });
@@ -67,7 +67,7 @@ export async function PATCH(
 
 export async function DELETE(
   request: Request,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   const profile = await getTenantProfile();
   if (!profile) return NextResponse.json({ error: "No autorizado" }, { status: 401 });
@@ -75,7 +75,7 @@ export async function DELETE(
     return NextResponse.json({ error: "Sin permiso" }, { status: 403 });
   }
 
-  const staffId = params.id;
+  const { id: staffId } = await params;
   const staff = await prisma.profile.findUnique({
     where: { id: staffId },
   });
