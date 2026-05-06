@@ -2,6 +2,7 @@ import { createClient } from "@/lib/supabase/server";
 import { prisma } from "@/lib/prisma";
 import { cookies } from "next/headers";
 import type { PlanType } from "@/lib/plans";
+import { setSentryUser } from "@/lib/monitoring";
 
 /** Returns the profile of the authenticated user scoped to an organization,
  *  including the org's plan. Handles superadmin impersonation via cookie. */
@@ -22,7 +23,7 @@ export async function getTenantProfile() {
         where: { id: impersonateOrgId },
         select: { plan: true, planExpiresAt: true, trialEndsAt: true },
       });
-      return {
+      const result = {
         ...profile,
         organizationId: impersonateOrgId,
         role: "ADMIN" as const,
@@ -30,6 +31,14 @@ export async function getTenantProfile() {
         planExpiresAt: org?.planExpiresAt ?? null,
         trialEndsAt: org?.trialEndsAt ?? null,
       };
+      // Set Sentry user context for error tracking
+      setSentryUser({
+        id: user.id,
+        email: user.email,
+        organizationId: impersonateOrgId,
+        role: "ADMIN",
+      }).catch(() => {});
+      return result;
     }
     // SUPERADMIN without impersonation — belongs at /superadmin, not tenant dashboard
     return null;
@@ -41,13 +50,21 @@ export async function getTenantProfile() {
       where: { id: profile.organizationId },
       select: { plan: true, planExpiresAt: true, trialEndsAt: true },
     });
-    return {
+    const result = {
       ...profile,
       organizationId: profile.organizationId,
       plan: (org?.plan ?? "BASICO") as PlanType,
       planExpiresAt: org?.planExpiresAt ?? null,
       trialEndsAt: org?.trialEndsAt ?? null,
     };
+    // Set Sentry user context for error tracking
+    setSentryUser({
+      id: user.id,
+      email: user.email,
+      organizationId: profile.organizationId,
+      role: profile.role,
+    }).catch(() => {});
+    return result;
   }
 
   return null;

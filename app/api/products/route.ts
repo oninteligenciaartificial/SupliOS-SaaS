@@ -4,6 +4,7 @@ import { prisma } from "@/lib/prisma";
 import { Prisma } from "@prisma/client";
 import { PLAN_LIMITS } from "@/lib/plans";
 import { hasPermission } from "@/lib/permissions";
+import { checkOrgRateLimit } from "@/lib/rate-limit";
 import { z } from "zod";
 import { logAudit } from "@/lib/audit";
 
@@ -65,6 +66,10 @@ export async function POST(request: Request) {
   const profile = await getTenantProfile();
   if (!profile) return NextResponse.json({ error: "No autorizado" }, { status: 401 });
   if (!hasPermission(profile.role, "products:create")) return NextResponse.json({ error: "Sin permiso" }, { status: 403 });
+
+  // Rate limit: 30 product creations per minute per org
+  const rateLimited = checkOrgRateLimit(profile.organizationId, "products", { windowMs: 60_000, max: 30 });
+  if (rateLimited) return rateLimited;
 
   const { maxProducts } = PLAN_LIMITS[profile.plan];
   if (isFinite(maxProducts)) {

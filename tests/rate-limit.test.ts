@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { consumeRateLimit, getRequestIp } from "@/lib/rate-limit";
+import { consumeRateLimit, getRequestIp, checkRateLimit, checkOrgRateLimit } from "@/lib/rate-limit";
 
 describe("getRequestIp", () => {
   it("prefers x-forwarded-for first IP", () => {
@@ -68,6 +68,84 @@ describe("consumeRateLimit", () => {
     expect(blocked.allowed).toBe(false);
     expect(afterWindow.allowed).toBe(true);
     expect(afterWindow.remaining).toBe(0);
+  });
+});
+
+describe("checkRateLimit", () => {
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  it("returns null when request is allowed", () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2026-05-06T12:00:00.000Z"));
+
+    const request = new Request("https://example.com", {
+      headers: { "x-forwarded-for": "192.168.1.1" },
+    });
+
+    const result = checkRateLimit(request, "test-check", { windowMs: 60_000, max: 10 });
+    expect(result).toBeNull();
+  });
+
+  it("returns 429 response when rate limited", () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2026-05-06T12:00:00.000Z"));
+
+    const request = new Request("https://example.com", {
+      headers: { "x-forwarded-for": "192.168.1.2" },
+    });
+
+    // Exhaust the limit
+    for (let i = 0; i < 3; i++) {
+      checkRateLimit(request, "test-check-limit", { windowMs: 60_000, max: 3 });
+    }
+
+    const result = checkRateLimit(request, "test-check-limit", { windowMs: 60_000, max: 3 });
+    expect(result).not.toBeNull();
+    expect(result?.status).toBe(429);
+  });
+});
+
+describe("checkOrgRateLimit", () => {
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  it("returns null when request is allowed", () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2026-05-06T12:00:00.000Z"));
+
+    const result = checkOrgRateLimit("org-123", "test-org", { windowMs: 60_000, max: 10 });
+    expect(result).toBeNull();
+  });
+
+  it("returns 429 response when rate limited", () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2026-05-06T12:00:00.000Z"));
+
+    // Exhaust the limit
+    for (let i = 0; i < 5; i++) {
+      checkOrgRateLimit("org-456", "test-org-limit", { windowMs: 60_000, max: 5 });
+    }
+
+    const result = checkOrgRateLimit("org-456", "test-org-limit", { windowMs: 60_000, max: 5 });
+    expect(result).not.toBeNull();
+    expect(result?.status).toBe(429);
+  });
+
+  it("isolates different organizations", () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2026-05-06T12:00:00.000Z"));
+
+    // Exhaust limit for org-A
+    for (let i = 0; i < 3; i++) {
+      checkOrgRateLimit("org-A", "test-isolate", { windowMs: 60_000, max: 3 });
+    }
+
+    // org-B should still be allowed
+    const result = checkOrgRateLimit("org-B", "test-isolate", { windowMs: 60_000, max: 3 });
+    expect(result).toBeNull();
   });
 });
 

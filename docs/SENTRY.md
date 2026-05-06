@@ -2,7 +2,7 @@
 
 ## Estado
 
-Activo en producción desde 2026-04-30.
+Activo en producción desde 2026-04-30. Mejorado 2026-05-06.
 
 ## Credenciales (en Vercel)
 
@@ -31,6 +31,8 @@ DSN completo no se documenta aquí — ver Vercel → Environment Variables.
 
 ```typescript
 // sentry.client.config.ts
+environment: process.env.VERCEL_ENV ?? process.env.NODE_ENV ?? "development",
+release: process.env.VERCEL_GIT_COMMIT_SHA,
 tracesSampleRate: 0.1,          // 10% de requests trackeadas
 replaysOnErrorSampleRate: 1.0,  // 100% de sesiones con error grabadas
 replaysSessionSampleRate: 0.01, // 1% de sesiones normales grabadas
@@ -42,13 +44,35 @@ replaysSessionSampleRate: 0.01, // 1% de sesiones normales grabadas
 
 ```typescript
 // lib/monitoring.ts — fire-and-forget seguro
-export function reportAsyncError(context: string, error: unknown, extra?: Record<string, unknown>) {
-  // Si NEXT_PUBLIC_SENTRY_DSN está configurado, captura en Sentry
-  // Si no, fallback a console.error
+export function reportAsyncError(scope: string, error: unknown, context?: MonitoringContext): void {
+  console.error(`[${scope}] operación async falló`, { error, ...context });
+  void captureWithSentry(error, scope, context);
 }
 ```
 
-Está integrado en:
+### Funciones disponibles
+
+| Función | Uso |
+|---|---|
+| `reportAsyncError(scope, error, context?)` | Captura errores con contexto |
+| `setSentryUser(user)` | Asocia errores con usuario autenticado |
+| `clearSentryUser()` | Limpia contexto de usuario (logout) |
+| `addSentryBreadcrumb(category, message, data?)` | Agrega traza para debugging |
+| `captureSentryMessage(message, level, context?)` | Captura mensajes custom |
+
+## Integración con auth.ts
+
+`getTenantProfile()` automáticamente establece el contexto de usuario en Sentry:
+- `id` — userId del usuario
+- `email` — email del usuario
+- `organizationId` — ID de la organización
+- `role` — rol del usuario (ADMIN, STAFF, etc.)
+
+Esto permite rastrear errores por usuario y organización en el dashboard de Sentry.
+
+## Integrado en
+
+- `lib/auth.ts` — user context en cada request autenticado
 - `app/api/orders/route.ts` — errores de stock decrement
 - `app/api/cron/siat-cufd/route.ts` — errores de refresh CUFD
 - `app/api/qr-payments/webhook/route.ts` — errores de webhook QR

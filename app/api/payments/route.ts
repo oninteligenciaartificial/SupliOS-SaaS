@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { getTenantProfile } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { PLAN_PRICES_BOB, type PlanType } from "@/lib/plans";
+import { checkOrgRateLimit } from "@/lib/rate-limit";
 import { z } from "zod";
 
 const createSchema = z.object({
@@ -28,6 +29,10 @@ export async function POST(request: Request) {
   const profile = await getTenantProfile();
   if (!profile) return NextResponse.json({ error: "No autorizado" }, { status: 401 });
   if (profile.role !== "ADMIN") return NextResponse.json({ error: "Sin permiso" }, { status: 403 });
+
+  // Rate limit: 5 payment requests per minute per org
+  const rateLimited = checkOrgRateLimit(profile.organizationId, "payments", { windowMs: 60_000, max: 5 });
+  if (rateLimited) return rateLimited;
 
   let body: unknown;
   try { body = await request.json(); }

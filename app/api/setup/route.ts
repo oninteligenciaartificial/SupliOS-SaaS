@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { prisma } from "@/lib/prisma";
+import { checkRateLimit } from "@/lib/rate-limit";
 import { z } from "zod";
 
 const schema = z.object({
@@ -9,6 +10,10 @@ const schema = z.object({
 });
 
 export async function POST(request: Request) {
+  // Rate limit: 10 requests per minute per IP
+  const rateLimited = checkRateLimit(request, "setup", { windowMs: 60_000, max: 10 });
+  if (rateLimited) return rateLimited;
+
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return NextResponse.json({ error: "No autorizado" }, { status: 401 });

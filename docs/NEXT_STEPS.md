@@ -1,11 +1,11 @@
 # Estado Técnico del Proyecto
 
-Análisis al 2026-05-01. Basado en lectura directa del código y ejecución de herramientas.
-Ver análisis detallado en `docs/ANALYSIS.md`.
+Análisis al 2026-05-06. Basado en lectura directa del código y ejecución de herramientas.
+Ver análisis detallado en `docs/ANALYSIS.md`. Ver plan de trabajo en `docs/PLAN.md`.
 
-**Últimas actualizaciones (2026-05-01):**
-- ✅ Staff management: CRUD + roles + UI completa en `/dashboard/staff`
-- ✅ Test coverage: 94 tests pasando (era 31) — +54 tests nuevos
+**Últimas actualizaciones (2026-05-06):**
+- ✅ Rate limiting mejorado: cleanup automático + 6 endpoints protegidos
+- ✅ Plan de trabajo completo documentado en `docs/PLAN.md`
 
 ---
 
@@ -103,12 +103,12 @@ Storefront público en `/{slug}/tienda`. La DB ya soporta productos con variante
 
 ## Infraestructura
 
-- [x] **Tests** — 31 tests pasando. `plans.test.ts` (plan limits, gates, errors) + `audit.test.ts` (plan gate, fire-and-forget, mock prisma). Pendiente: integración real de orders stock decrement.
-- [x] **Cron jobs en Vercel** — confirmado en `vercel.json`.
-- [x] **Rate limiting** — aplicado en `POST /api/registro`.
+- [x] **Tests** — 106 tests pasando. `plans.test.ts` (plan limits, gates, errors) + `audit.test.ts` (plan gate, fire-and-forget, mock prisma) + `rate-limit.test.ts` + `permissions.test.ts` + `currency.test.ts` + `staff.test.ts` + `plans-addons.test.ts` + `monitoring.test.ts`.
+- [x] **Cron jobs en Vercel** — confirmado en `vercel.json` (7 jobs).
+- [x] **Rate limiting** — aplicado en 6 endpoints: `/api/setup`, `/api/team`, `/api/payments`, `/api/products`, `/api/orders`, `/api/registro`. Cleanup automático cada 60s.
 - [x] **Transacciones atómicas en órdenes** — `prisma.$transaction([create, ...decrements])`.
 - [x] **Error monitoring (fase 1)** — `reportAsyncError()` en rutas críticas.
-- [x] **Sentry** — ✅ Activo en producción. DSN configurado en Vercel. Org: `onia-agency`, proyecto: `javascript-nextjs`. Ver `docs/SENTRY.md`.
+- [x] **Sentry** — ✅ Activo en producción con configuración mejorada. DSN configurado en Vercel. Org: `onia-agency`, proyecto: `javascript-nextjs`. User context automático. Ver `docs/SENTRY.md`.
 
 ---
 

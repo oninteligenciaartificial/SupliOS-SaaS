@@ -361,3 +361,139 @@ after: Record<string, unknown> | null;
 - `POST /api/orders` (decremento stock producto/variante, canje puntos, permisos y errores de validación).
 
 ---
+
+## 2026-05-06
+
+### Plan de trabajo — documento completo
+
+**Motivación:** Crear un plan estructurado basado en análisis completo del codebase y documentación.
+
+**Cambios:**
+- Nuevo documento: `docs/PLAN.md`
+  - Resumen ejecutivo del proyecto (54 API routes, 22 lib files, 7 test files)
+  - Estado por área (completado/pendiente)
+  - Fase 1: Mejoras de seguridad (rate limiting mejorado)
+  - Fase 2: Testing (expansión de cobertura)
+  - Fase 3: Code quality (documentación actualizada)
+  - Fase 4: Features pendientes (WhatsApp, SIAT, QR, emails)
+  - Cronología de ejecución (4 semanas)
+  - Métricas de éxito
+
+**Archivos creados:**
+- `docs/PLAN.md` — plan de trabajo completo
+
+---
+
+### Rate limiting mejorado — seguridad
+
+**Motivación:** `lib/rate-limit.ts` tenía limitaciones: sin cleanup de buckets expirados (memory leak), sin helper functions, solo en `/api/registro`.
+
+**Cambios en `lib/rate-limit.ts`:**
+- Agregado cleanup automático de buckets expirados cada 60 segundos
+- Agregado import de `NextResponse`
+- Agregado función `rateLimitHeaders()` — genera headers estándar de rate limiting
+- Agregado función `rateLimitResponse()` — crea respuesta 429 con headers
+- Agregado función `checkRateLimit()` — helper para endpoints públicos (usa IP)
+- Agregado función `checkOrgRateLimit()` — helper para endpoints autenticados (usa orgId)
+- Documentación completa con ejemplos de uso
+
+**Endpoints protegidos:**
+- `POST /api/setup` — 10 req/min por IP (creación de org)
+- `POST /api/team` — 5 req/min por org (invitación de staff)
+- `POST /api/payments` — 5 req/min por org (solicitud de pago)
+- `POST /api/products` — 30 req/min por org (creación de productos)
+- `POST /api/orders` — 60 req/min por org (creación de pedidos)
+
+**Archivos modificados:**
+- `lib/rate-limit.ts` — mejoras de implementación
+- `app/api/setup/route.ts` — rate limiting agregado
+- `app/api/team/route.ts` — rate limiting agregado
+- `app/api/payments/route.ts` — rate limiting agregado
+- `app/api/products/route.ts` — rate limiting agregado
+- `app/api/orders/route.ts` — rate limiting agregado
+
+**Patrón de uso:**
+```typescript
+// Endpoint público (usa IP)
+const rateLimited = checkRateLimit(request, "route-key", { windowMs: 60_000, max: 10 });
+if (rateLimited) return rateLimited;
+
+// Endpoint autenticado (usa orgId)
+const rateLimited = checkOrgRateLimit(profile.organizationId, "route-key", { windowMs: 60_000, max: 10 });
+if (rateLimited) return rateLimited;
+```
+
+**Verificación:**
+- TypeScript: sin errores de tipo
+- Rate limits aplicados correctamente en 6 endpoints
+- Cleanup automático previene memory leaks
+
+---
+
+### Sentry mejoras — observabilidad avanzada
+
+**Motivación:** Sentry ya estaba implementado pero con configuración mínima. Se mejoró con mejores prácticas para mejor debugging y tracking.
+
+**Cambios en configuración Sentry:**
+
+1. `sentry.client.config.ts`:
+   - Agregado `environment` (VERCEL_ENV o NODE_ENV)
+   - Agregado `release` (VERCEL_GIT_COMMIT_SHA para tracking de commits)
+   - Agregado `integrations` con `replayIntegration` (maskAllText, blockAllMedia)
+   - Agregado `beforeSend` filter (no envía en development)
+
+2. `sentry.server.config.ts`:
+   - Agregado `environment` y `release`
+   - Agregado `beforeSend` filter
+
+3. `sentry.edge.config.ts`:
+   - Agregado `environment` y `release`
+   - Agregado `beforeSend` filter
+
+**Cambios en `lib/monitoring.ts`:**
+- Agregado `setSentryUser()` — asocia errores con usuario autenticado
+- Agregado `clearSentryUser()` — limpia contexto en logout
+- Agregado `addSentryBreadcrumb()` — traza de acciones para debugging
+- Agregado `captureSentryMessage()` — captura mensajes custom (no errores)
+- Todas las funciones son async con fallback silencioso si Sentry no está disponible
+
+**Cambios en `lib/auth.ts`:**
+- Integrado `setSentryUser()` en `getTenantProfile()`
+- Cada request autenticado ahora tiene contexto de usuario en Sentry
+- Incluye: userId, email, organizationId, role
+
+**Archivos modificados:**
+- `sentry.client.config.ts` — configuración mejorada
+- `sentry.server.config.ts` — configuración mejorada
+- `sentry.edge.config.ts` — configuración mejorada
+- `lib/monitoring.ts` — nuevas funciones helper
+- `lib/auth.ts` — integración Sentry user context
+
+---
+
+### Tests — expansión de cobertura
+
+**Motivación:** Aumentar cobertura de tests para rate limiting y monitoring.
+
+**Tests creados:**
+1. `tests/rate-limit.test.ts` — +6 tests nuevos:
+   - `checkRateLimit` — retorna null cuando permitido
+   - `checkRateLimit` — retorna 429 cuando rate limited
+   - `checkOrgRateLimit` — retorna null cuando permitido
+   - `checkOrgRateLimit` — retorna 429 cuando rate limited
+   - `checkOrgRateLimit` — aísla organizaciones diferentes
+
+2. `tests/monitoring.test.ts` — 8 tests nuevos:
+   - `reportAsyncError` — log a consola
+   - `reportAsyncError` — llama Sentry captureException
+   - `setSentryUser` — establece contexto de usuario
+   - `clearSentryUser` — limpia contexto de usuario
+   - `addSentryBreadcrumb` — agrega breadcrumb
+   - `captureSentryMessage` — captura mensaje info
+   - `captureSentryMessage` — captura mensaje warning
+
+**Resultado:**
+- `npm test` → **8 archivos, 106 tests, todos pasando**
+- Tests anteriores: 94 → Tests actuales: 106 (+12 tests nuevos)
+
+---

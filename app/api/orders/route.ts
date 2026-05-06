@@ -5,6 +5,7 @@ import { prisma } from "@/lib/prisma";
 import { sendOrderConfirmation, sendNewOrderAlert } from "@/lib/email";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { hasPermission } from "@/lib/permissions";
+import { checkOrgRateLimit } from "@/lib/rate-limit";
 import { z } from "zod";
 import { Prisma } from "@prisma/client";
 import { logAudit } from "@/lib/audit";
@@ -71,6 +72,10 @@ export async function POST(request: Request) {
   const profile = await getTenantProfile();
   if (!profile) return NextResponse.json({ error: "No autorizado" }, { status: 401 });
   if (!hasPermission(profile.role, "orders:create")) return NextResponse.json({ error: "Sin permiso" }, { status: 403 });
+
+  // Rate limit: 60 orders per minute per org
+  const rateLimited = checkOrgRateLimit(profile.organizationId, "orders", { windowMs: 60_000, max: 60 });
+  if (rateLimited) return rateLimited;
 
   const staffProfile = await prisma.profile.findUnique({ where: { userId: user.id }, select: { id: true } });
 
