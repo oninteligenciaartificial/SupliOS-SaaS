@@ -7,6 +7,7 @@ import { z } from "zod";
 const schema = z.object({
   organizationName: z.string().min(1),
   userName: z.string().min(1),
+  businessType: z.enum(["GENERAL", "ROPA", "SUPLEMENTOS", "ELECTRONICA", "FARMACIA", "FERRETERIA"]).optional(),
 });
 
 export async function POST(request: Request) {
@@ -29,7 +30,7 @@ export async function POST(request: Request) {
   const result = schema.safeParse(body);
   if (!result.success) return NextResponse.json({ error: "Datos invalidos" }, { status: 400 });
 
-  const { organizationName, userName } = result.data;
+  const { organizationName, userName, businessType } = result.data;
 
   // Crear slug unico a partir del nombre
   const slug = organizationName
@@ -46,6 +47,7 @@ export async function POST(request: Request) {
         name: organizationName.trim(),
         slug,
         trialEndsAt,
+        businessType: businessType ?? "GENERAL",
         profiles: {
           create: {
             userId: user.id,
