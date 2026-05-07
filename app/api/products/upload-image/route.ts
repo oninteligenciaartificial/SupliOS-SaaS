@@ -5,7 +5,37 @@ import { createAdminClient } from "@/lib/supabase/admin";
 
 const BUCKET = "product-images";
 const MAX_BYTES = 5 * 1024 * 1024; // 5 MB
-const ALLOWED_TYPES = ["image/jpeg", "image/png", "image/webp", "image/gif"];
+
+const MAGIC_BYTES: Record<string, { bytes: number[]; mime: string; offset: number }[]> = {
+  "image/jpeg": [{ bytes: [0xFF, 0xD8, 0xFF], mime: "image/jpeg", offset: 0 }],
+  "image/png": [{ bytes: [0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A], mime: "image/png", offset: 0 }],
+  "image/gif": [
+    { bytes: [0x47, 0x49, 0x46, 0x38, 0x37, 0x61], mime: "image/gif", offset: 0 },
+    { bytes: [0x47, 0x49, 0x46, 0x38, 0x39, 0x61], mime: "image/gif", offset: 0 },
+  ],
+  "image/webp": [
+    { bytes: [0x52, 0x49, 0x46, 0x46], mime: "image/webp", offset: 0 },
+    { bytes: [0x57, 0x45, 0x42, 0x50], mime: "image/webp", offset: 8 },
+  ],
+};
+
+const ALLOWED_MIMES = ["image/jpeg", "image/png", "image/webp", "image/gif"];
+
+async function detectMimeFromBuffer(buffer: ArrayBuffer): Promise<string | null> {
+  const bytes = new Uint8Array(buffer);
+  for (const [mime, signatures] of Object.entries(MAGIC_BYTES)) {
+    for (const sig of signatures) {
+      if (bytes.length >= sig.offset + sig.bytes.length) {
+        let match = true;
+        for (let i = 0; i < sig.bytes.length; i++) {
+          if (bytes[sig.offset + i] !== sig.bytes[i]) { match = false; break; }
+        }
+        if (match) return mime;
+      }
+    }
+  }
+  return null;
+}
 
 export async function POST(request: Request) {
   const profile = await getTenantProfile();
@@ -23,14 +53,19 @@ export async function POST(request: Request) {
   const file = formData.get("file");
   if (!(file instanceof File)) return NextResponse.json({ error: "Archivo requerido" }, { status: 400 });
   if (file.size > MAX_BYTES) return NextResponse.json({ error: "Imagen demasiado grande (máx 5 MB)" }, { status: 400 });
-  if (!ALLOWED_TYPES.includes(file.type)) return NextResponse.json({ error: "Tipo no permitido (JPG, PNG, WebP, GIF)" }, { status: 400 });
+
+  const buffer = await file.slice(0, 12).arrayBuffer();
+  const realMime = await detectMimeFromBuffer(buffer);
+  if (!realMime || !ALLOWED_MIMES.includes(realMime)) {
+    return NextResponse.json({ error: "Tipo no permitido (JPG, PNG, WebP, GIF)" }, { status: 400 });
+  }
 
   const ext = file.name.split(".").pop() ?? "jpg";
   const path = `${profile.organizationId}/${Date.now()}.${ext}`;
 
   const supabase = createAdminClient();
   const { error } = await supabase.storage.from(BUCKET).upload(path, file, {
-    contentType: file.type,
+    contentType: realMime,
     upsert: false,
   });
 

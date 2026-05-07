@@ -5,6 +5,7 @@ import { sendOrderConfirmation } from "@/lib/email";
 import { z } from "zod";
 import { Prisma } from "@prisma/client";
 import type { PlanType } from "@/lib/plans";
+import { consumeRateLimit, getRequestIp } from "@/lib/rate-limit";
 
 const schema = z.object({
   slug: z.string().min(1),
@@ -41,21 +42,41 @@ export async function POST(request: Request) {
   if (!canUseFeature(org.plan as PlanType, "tienda_online"))
     return NextResponse.json({ error: "Tienda no disponible" }, { status: 403 });
 
+  const ip = getRequestIp(new Headers(request.headers));
+  const rateLimit = consumeRateLimit(`tienda:${ip}`, { windowMs: 60_000, max: 30 });
+  if (!rateLimit.allowed) {
+    return NextResponse.json(
+      { error: "Demasiadas solicitudes. Intenta nuevamente en unos minutos." },
+      { status: 429, headers: { "Retry-After": String(Math.ceil((rateLimit.resetAt - Date.now()) / 1000)) } }
+    );
+  }
+
   const productIds = items.map(i => i.productId);
   const products = await prisma.product.findMany({
     where: { id: { in: productIds }, organizationId: org.id, active: true },
-    select: { id: true, stock: true, hasVariants: true, variants: { select: { id: true, stock: true } } },
+    select: {
+      id: true, stock: true, hasVariants: true, price: true,
+      variants: { select: { id: true, stock: true, price: true } },
+    },
   });
   const productMap = Object.fromEntries(products.map(p => [p.id, p]));
 
   for (const item of items) {
     const p = productMap[item.productId];
     if (!p) return NextResponse.json({ error: `Producto no disponible` }, { status: 400 });
+
+    let price: number;
     if (item.variantId) {
       const v = p.variants.find(v => v.id === item.variantId);
       if (!v || v.stock < item.quantity) return NextResponse.json({ error: "Stock insuficiente" }, { status: 400 });
-    } else if (!p.hasVariants && p.stock < item.quantity) {
-      return NextResponse.json({ error: "Stock insuficiente" }, { status: 400 });
+      price = Number(v.price ?? p.price);
+    } else {
+      if (!p.hasVariants && p.stock < item.quantity) return NextResponse.json({ error: "Stock insuficiente" }, { status: 400 });
+      price = Number(p.price);
+    }
+
+    if (Math.abs(item.unitPrice - price) > 0.01) {
+      return NextResponse.json({ error: "Precio manipulado. Recarga la página e intenta de nuevo." }, { status: 400 });
     }
   }
 

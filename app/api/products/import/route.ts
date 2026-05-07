@@ -20,6 +20,20 @@ export async function POST(request: Request) {
   const sheet = workbook.Sheets[workbook.SheetNames[0]];
   const rows = XLSX.utils.sheet_to_json<Record<string, unknown>>(sheet);
 
+  function sanitizeRow(obj: Record<string, unknown>): Record<string, unknown> {
+    const sanitized: Record<string, unknown> = Object.create(null);
+    for (const key of Object.keys(obj)) {
+      if (key === "__proto__" || key === "constructor" || key === "prototype") continue;
+      const val = obj[key];
+      sanitized[key] = (val && typeof val === "object" && !Array.isArray(val))
+        ? Object.create(null)
+        : val;
+    }
+    return sanitized;
+  }
+
+  const sanitizedRows = rows.map(sanitizeRow);
+
   if (rows.length === 0) return NextResponse.json({ error: "El archivo esta vacio" }, { status: 400 });
   if (rows.length > 500) return NextResponse.json({ error: "Maximo 500 productos por importacion" }, { status: 400 });
 
@@ -27,8 +41,8 @@ export async function POST(request: Request) {
   const created: string[] = [];
   const errors: string[] = [];
 
-  for (let i = 0; i < rows.length; i++) {
-    const row = rows[i];
+  for (let i = 0; i < sanitizedRows.length; i++) {
+    const row = sanitizedRows[i];
     const name = String(row["nombre"] ?? row["name"] ?? row["Nombre"] ?? "").trim();
     if (!name) { errors.push(`Fila ${i + 2}: nombre requerido`); continue; }
 
