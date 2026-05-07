@@ -10,7 +10,6 @@ const staffQuerySchema = z.object({
 });
 
 const createStaffSchema = z.object({
-  email: z.string().email("Email inválido"),
   name: z.string().min(1, "Nombre requerido"),
   role: z.enum(["MANAGER", "STAFF", "VIEWER"], { message: "Rol no permitido" }),
   branchId: z.string().optional(),
@@ -41,7 +40,6 @@ export async function GET(request: Request) {
       select: {
         id: true,
         userId: true,
-        email: true,
         name: true,
         role: true,
         branchId: true,
@@ -73,7 +71,7 @@ export async function POST(request: Request) {
   const parsed = createStaffSchema.safeParse(body);
   if (!parsed.success) return NextResponse.json({ error: parsed.error.message }, { status: 400 });
 
-  const { email, name, role, branchId } = parsed.data;
+  const { name, role, branchId } = parsed.data;
 
   const staffLimit = {
     BASICO: 1,
@@ -111,7 +109,6 @@ export async function POST(request: Request) {
     data: {
       userId,
       organizationId: profile.organizationId,
-      email,
       name,
       role,
       branchId,
@@ -119,7 +116,6 @@ export async function POST(request: Request) {
     select: {
       id: true,
       userId: true,
-      email: true,
       name: true,
       role: true,
       branchId: true,

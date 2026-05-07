@@ -53,7 +53,6 @@ export async function PATCH(
     select: {
       id: true,
       userId: true,
-      email: true,
       name: true,
       role: true,
       branchId: true,

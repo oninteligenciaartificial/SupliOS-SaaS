@@ -107,7 +107,6 @@ model Profile {
   id             String   @id @default(cuid())
   userId         String   @unique
   organizationId String?
-  email          String?
   name           String
   role           Role     @default(STAFF)
   branchId       String?
