@@ -103,9 +103,9 @@ Storefront público en `/{slug}/tienda`. La DB ya soporta productos con variante
 
 ## Infraestructura
 
-- [x] **Tests** — 186 tests passing. 10 test files: `rate-limit.test.ts`, `monitoring.test.ts`, `plans.test.ts`, `plans-addons.test.ts`, `permissions.test.ts`, `currency.test.ts`, `staff.test.ts`, `orders-logic.test.ts`, `products-customers.test.ts`, `audit.test.ts`.
+- [x] **Tests** — 209 tests passing. 11 test files: `rate-limit.test.ts`, `monitoring.test.ts`, `plans.test.ts`, `plans-addons.test.ts`, `permissions.test.ts`, `currency.test.ts`, `staff.test.ts`, `orders-logic.test.ts`, `products-customers.test.ts`, `audit.test.ts`, `tienda-security.test.ts`.
 - [x] **Cron jobs en Vercel** — confirmado en `vercel.json` (7 jobs).
-- [x] **Rate limiting** — aplicado en 6 endpoints: `/api/setup`, `/api/team`, `/api/payments`, `/api/products`, `/api/orders`, `/api/registro`. Cleanup automático cada 60s.
+- [x] **Rate limiting** — aplicado en 7 endpoints: `/api/setup`, `/api/team`, `/api/payments`, `/api/products`, `/api/orders`, `/api/registro`, `/api/tienda/checkout`. Cleanup automático cada 60s.
 - [x] **Transacciones atómicas en órdenes** — `prisma.$transaction([create, ...decrements])`.
 - [x] **Error monitoring (fase 1)** — `reportAsyncError()` en rutas críticas.
 - [x] **Sentry** — ✅ Activo en producción con configuración mejorada. DSN configurado en Vercel. Org: `onia-agency`, proyecto: `javascript-nextjs`. User context automático. Ver `docs/SENTRY.md`.
