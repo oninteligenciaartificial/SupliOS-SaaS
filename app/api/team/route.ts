@@ -19,7 +19,7 @@ export async function GET() {
 
   const members = await prisma.profile.findMany({
     where: { organizationId: profile.organizationId },
-    orderBy: { createdAt: "asc" },
+    orderBy: { id: "asc" },
   });
 
   return NextResponse.json(members);

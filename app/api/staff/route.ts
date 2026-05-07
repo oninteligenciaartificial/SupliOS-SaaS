@@ -43,13 +43,11 @@ export async function GET(request: Request) {
         name: true,
         role: true,
         branchId: true,
-        createdAt: true,
-        updatedAt: true,
         branch: { select: { id: true, name: true } },
       },
       skip,
       take: l,
-      orderBy: { createdAt: "desc" },
+      orderBy: { id: "desc" },
     }),
   ]);
 
@@ -119,7 +117,6 @@ export async function POST(request: Request) {
       name: true,
       role: true,
       branchId: true,
-      createdAt: true,
       branch: { select: { id: true, name: true } },
     },
   });
