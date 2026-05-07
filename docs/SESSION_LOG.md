@@ -1,5 +1,78 @@
 ---
 
+## 2026-05-07 (sesión tarde)
+
+### Fix 1: `profiles.email` — removido del schema (columna no existe en DB)
+
+**Error:**
+```
+PrismaClientKnownRequestError: The column `profiles.email` does not exist in the current database.
+```
+
+**Causa:** Se agregó `email String?` al modelo `Profile` en el schema Prisma, pero la migración nunca se aplicó a Supabase. Como no hay `DATABASE_URL` local, no se puede hacer `prisma db push`.
+
+**Fix:** Removido `email` del modelo `Profile` en `prisma/schema.prisma`. El email ya se obtiene de Supabase Auth (`user.email`) en `/api/me`. Eliminadas todas las referencias en `app/api/staff/route.ts` y `app/api/staff/[id]/route.ts`.
+
+**Archivos modificados:**
+- `prisma/schema.prisma` — removido `email String?` de Profile
+- `app/api/staff/route.ts` — removido email de schema, destructuring, select, create
+- `app/api/staff/[id]/route.ts` — removido email del select
+- `prisma/migrations/20260507000000_add_profile_email/` — eliminado (nunca aplicado)
+
+---
+
+### Fix 2: Lazy Prisma initialization — fix build error `DATABASE_URL no esta configurada`
+
+**Error:**
+```
+Error: DATABASE_URL no esta configurada
+Failed to collect page data for /api/activity-log
+```
+
+**Causa:** `PrismaClient` se instanciaba al nivel del módulo (`lib/prisma.ts:17`), lo que lanzaba el error durante el build estático de Next.js cuando `DATABASE_URL` no existe en el entorno de build.
+
+**Fix:** Wrapeé `prisma` en un `Proxy` que crea el cliente solo al primer acceso (lazy). Durante el build estático, las páginas que no acceden a `prisma` no fallan.
+
+**Archivo modificado:** `lib/prisma.ts`
+
+---
+
+### Fix 3: V-02 unitPrice validation en tienda/checkout
+
+**Archivo:** `app/api/tienda/checkout/route.ts`
+- Validación de `unitPrice` contra precio real de DB (producto o variante)
+- Mismo patrón que V-01 en `/api/orders`
+
+---
+
+### Fix 4: V-07 MIME detection por magic bytes
+
+**Archivo:** `app/api/products/upload-image/route.ts`
+- Ya no confía en `file.type` del header
+- Lee primeros 12 bytes y verifica magic bytes (JPEG, PNG, GIF, WebP)
+
+---
+
+### Fix 5: Rate limit en /api/tienda/checkout
+
+- 30 req/min por IP en endpoint público
+
+---
+
+### Fix 6: xlsx prototype pollution mitigation
+
+**Archivo:** `app/api/products/import/route.ts`
+- `sanitizeRow()` con `Object.create(null)` previene contaminación por `__proto__`
+
+---
+
+### Tests
+
+- `tests/tienda-security.test.ts` — 23 tests nuevos (V-02, V-07, rate limiting)
+- **Total: 209 tests pasando, 11 archivos**
+
+---
+
 ## 2026-05-07
 
 ### Bugfix - `profiles.email` column missing in production DB
