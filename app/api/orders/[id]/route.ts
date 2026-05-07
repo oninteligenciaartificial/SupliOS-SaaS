@@ -57,9 +57,8 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
 
   logAudit({ orgId: profile.organizationId, orgPlan: profile.plan, userId: user.id, action: "update", entityType: "order", entityId: id, before: { status: order.status }, after: { status: result.data.status } });
 
-  // Restore stock when cancelling
   if (result.data.status === "CANCELADO" && order.status !== "CANCELADO") {
-    await Promise.all(
+    await prisma.$transaction(
       order.items.map((item) =>
         item.variantId
           ? prisma.productVariant.update({
@@ -74,9 +73,8 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
     );
   }
 
-  // Re-decrement stock if un-cancelling
   if (result.data.status !== "CANCELADO" && order.status === "CANCELADO") {
-    await Promise.all(
+    await prisma.$transaction(
       order.items.map((item) =>
         item.variantId
           ? prisma.productVariant.update({

@@ -87,6 +87,24 @@ export async function POST(request: Request) {
   if (!result.success) return NextResponse.json({ error: "Datos invalidos", details: result.error.issues }, { status: 400 });
 
   const { customerName, customerId, paymentMethod, shippingAddress, notes, loyaltyPointsRedeemed, items } = result.data;
+
+  // V-01 fix: validate unitPrice against actual product price to prevent manipulation
+  const productIds = [...new Set(items.map((i) => i.productId))];
+  const products = await prisma.product.findMany({
+    where: { id: { in: productIds }, organizationId: profile.organizationId },
+    select: { id: true, price: true },
+  });
+  const priceMap = new Map(products.map((p) => [p.id, Number(p.price)]));
+  for (const item of items) {
+    const expectedPrice = priceMap.get(item.productId);
+    if (expectedPrice === undefined) {
+      return NextResponse.json({ error: "Producto no encontrado" }, { status: 404 });
+    }
+    if (Math.abs(item.unitPrice - expectedPrice) > 0.01) {
+      return NextResponse.json({ error: "Precio manipulado. Recarga la página e intenta de nuevo." }, { status: 400 });
+    }
+  }
+
   const subtotalRaw = items.reduce((sum: number, i: { quantity: number; unitPrice: number }) => sum + i.quantity * i.unitPrice, 0);
 
   // 10 points = Bs. 1 discount

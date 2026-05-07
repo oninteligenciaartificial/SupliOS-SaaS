@@ -103,7 +103,7 @@ Storefront público en `/{slug}/tienda`. La DB ya soporta productos con variante
 
 ## Infraestructura
 
-- [x] **Tests** — 106 tests pasando. `plans.test.ts` (plan limits, gates, errors) + `audit.test.ts` (plan gate, fire-and-forget, mock prisma) + `rate-limit.test.ts` + `permissions.test.ts` + `currency.test.ts` + `staff.test.ts` + `plans-addons.test.ts` + `monitoring.test.ts`.
+- [x] **Tests** — 186 tests passing. 10 test files: `rate-limit.test.ts`, `monitoring.test.ts`, `plans.test.ts`, `plans-addons.test.ts`, `permissions.test.ts`, `currency.test.ts`, `staff.test.ts`, `orders-logic.test.ts`, `products-customers.test.ts`, `audit.test.ts`.
 - [x] **Cron jobs en Vercel** — confirmado en `vercel.json` (7 jobs).
 - [x] **Rate limiting** — aplicado en 6 endpoints: `/api/setup`, `/api/team`, `/api/payments`, `/api/products`, `/api/orders`, `/api/registro`. Cleanup automático cada 60s.
 - [x] **Transacciones atómicas en órdenes** — `prisma.$transaction([create, ...decrements])`.

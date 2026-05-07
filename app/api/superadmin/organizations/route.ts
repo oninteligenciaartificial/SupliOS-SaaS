@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { prisma } from "@/lib/prisma";
 import { getSuperAdmin } from "@/lib/superadmin";
+import { checkRateLimit } from "@/lib/rate-limit";
 import { z } from "zod";
 
 const schema = z.object({
@@ -31,6 +32,9 @@ export async function GET() {
 export async function POST(request: Request) {
   const admin = await getSuperAdmin();
   if (!admin) return NextResponse.json({ error: "No autorizado" }, { status: 403 });
+
+  const rateLimited = checkRateLimit(request, "superadmin-create-org", { windowMs: 60_000, max: 5 });
+  if (rateLimited) return rateLimited;
 
   let body: unknown;
   try { body = await request.json(); }
