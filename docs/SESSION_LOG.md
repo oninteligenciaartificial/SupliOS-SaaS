@@ -1,5 +1,27 @@
 ---
 
+## 2026-05-09 (sesión tarde) — Categorías por tipo de negocio
+
+### Feat: Categorías scopeadas por businessType
+
+**Problema:** Al cambiar de "Suplementos" a "Farmacia", las categorías de suplementos seguían apareciendo en farmacia.
+
+**Solución:** Cada categoría ahora tiene un campo `businessType`. Por defecto solo se muestran las del tipo de negocio activo, pero hay un toggle "Mostrar todas" para ver las de otros tipos.
+
+**Cambios:**
+- `prisma/schema.prisma` — Agregado `businessType String @default("GENERAL")` al modelo Category
+- `prisma/migrations/20260509000000_add_category_business_type/migration.sql` — Migration para Supabase
+- `lib/auth.ts` — `getTenantProfile()` ahora incluye `businessType` del org
+- `app/api/categories/route.ts` — GET filtra por `businessType` (con `?all=1` para ver todas), POST taguea con el businessType actual
+- `app/(dashboard)/categories/page.tsx` — Toggle "Solo [tipo]" / "Mostrando todas", badge de tipo por categoría, placeholder contextual en el form
+
+**IMPORTANTE:** La migration debe aplicarse manualmente a Supabase:
+```sql
+ALTER TABLE "categories" ADD COLUMN "businessType" TEXT NOT NULL DEFAULT 'GENERAL';
+```
+
+---
+
 ## 2026-05-08 (sesión noche) — Sidebar dinámico + Plan gating completo
 
 ### Feat: Sidebar dinámico por tipo de negocio
