@@ -1,5 +1,25 @@
 ---
 
+## 2026-05-08
+
+### Fix: Supabase env vars missing — error message mejorado
+
+**Error:**
+```
+Error: Your project's URL and Key are required to create a Supabase client!
+```
+
+**Causa:** Las variables de entorno `NEXT_PUBLIC_SUPABASE_URL` y `NEXT_PUBLIC_SUPABASE_ANON_KEY` no están configuradas en Vercel, o fueron accidentalmente eliminadas.
+
+**Fix:** Agregados guards explícitos en `lib/supabase/server.ts`, `lib/supabase/client.ts`, y `lib/supabase/admin.ts` que lanzan un error claro indicando exactamente qué vars faltan.
+
+**Acción requerida:** Configurar estas vars en Vercel Dashboard → Settings → Environment Variables:
+- `NEXT_PUBLIC_SUPABASE_URL` — URL del proyecto Supabase
+- `NEXT_PUBLIC_SUPABASE_ANON_KEY` — API anon key
+- `SUPABASE_SERVICE_ROLE_KEY` — Service role key (para admin)
+
+---
+
 ## 2026-05-07 (sesión noche)
 
 ### Fix: `profiles.createdAt` y `profiles.updatedAt` — removidos del schema (columnas no existen en DB)

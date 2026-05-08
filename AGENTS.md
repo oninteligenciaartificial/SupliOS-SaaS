@@ -46,3 +46,16 @@ Siempre usar `.catch(() => {})` en envíos de email. Nunca bloquear la respuesta
 
 Usar `Prisma.DbNull` para NULL, `undefined` para omitir, valor directo para guardar.
 
+### Supabase env vars — requeridas en Vercel
+
+Estas variables DEBEN estar configuradas en Vercel → Settings → Environment Variables:
+
+| Variable | Dónde obtenerla |
+|---|---|
+| `NEXT_PUBLIC_SUPABASE_URL` | Supabase Dashboard → Settings → API → Project URL |
+| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Supabase Dashboard → Settings → API → anon public |
+| `SUPABASE_SERVICE_ROLE_KEY` | Supabase Dashboard → Settings → API → service_role (secret) |
+| `DATABASE_URL` | Supabase Dashboard → Settings → Database → Connection string (Transaction mode) |
+
+Si falta alguna, la app falla con error explícito en `lib/supabase/*.ts`.
+
