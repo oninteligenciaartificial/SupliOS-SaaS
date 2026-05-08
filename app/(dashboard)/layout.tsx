@@ -73,6 +73,10 @@ export default async function DashboardLayout({
     { href: "/superadmin/payments", label: "Pagos y Planes" },
   ];
 
+  const externalLinks = [
+    { href: "https://gesti-os.vercel.app", label: "Ver Landing", external: true },
+  ];
+
   // Map feature keys to nav hrefs for lock detection
   const featureHrefMap: Record<string, string> = {
     reports: "/reports",
@@ -104,7 +108,7 @@ export default async function DashboardLayout({
     ...(isImpersonating ? [] : [{ href: "/settings", label: "Configuracion" }]),
   ];
 
-  const navLinks = isSuperAdmin ? superAdminLinks : tenantLinks;
+  const navLinks = isSuperAdmin ? [...superAdminLinks, ...externalLinks] : tenantLinks;
 
   let orgDisplayName: string;
   if (isSuperAdmin) {

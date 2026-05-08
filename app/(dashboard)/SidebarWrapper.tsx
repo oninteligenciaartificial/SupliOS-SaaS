@@ -1,12 +1,12 @@
 "use client";
 
 import { useState } from "react";
-import { Menu, X } from "lucide-react";
+import { Menu, X, ExternalLink } from "lucide-react";
 import { SidebarNav } from "./SidebarNav";
 import { SidebarUser } from "./SidebarUser";
 import { PLAN_META, type PlanType } from "@/lib/plans";
 
-interface NavLink { href: string; label: string }
+interface NavLink { href: string; label: string; external?: boolean }
 
 interface Props {
   links: NavLink[];
@@ -30,6 +30,9 @@ export function SidebarWrapper({ links, lockedHrefs, orgName, isSuperAdmin, isIm
     ? Math.ceil((new Date(planExpiresAt).getTime() - Date.now()) / (1000 * 60 * 60 * 24))
     : null;
   const showExpiryAlert = daysLeft !== null && daysLeft <= 7 && daysLeft >= 0;
+
+  const internalLinks = links.filter(l => !l.external);
+  const externalLinks = links.filter(l => l.external);
 
   return (
     <>
@@ -82,7 +85,25 @@ export function SidebarWrapper({ links, lockedHrefs, orgName, isSuperAdmin, isIm
           </button>
         </div>
 
-        <SidebarNav links={links} lockedHrefs={lockedHrefs} onNavigate={() => setOpen(false)} />
+        <SidebarNav links={internalLinks} lockedHrefs={lockedHrefs} onNavigate={() => setOpen(false)} />
+
+        {externalLinks.length > 0 && (
+          <div className="flex flex-col gap-1 border-t border-white/5 pt-4">
+            {externalLinks.map((link) => (
+              <a
+                key={link.href}
+                href={link.href}
+                target="_blank"
+                rel="noopener noreferrer"
+                onClick={() => setOpen(false)}
+                className="px-4 py-3 rounded-xl text-sm font-medium text-brand-muted hover:bg-white/5 hover:text-white transition-colors flex items-center justify-between"
+              >
+                <span>{link.label}</span>
+                <ExternalLink size={13} className="text-brand-muted flex-shrink-0" />
+              </a>
+            ))}
+          </div>
+        )}
 
         {planMeta && (
           <div className="space-y-2">

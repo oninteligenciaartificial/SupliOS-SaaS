@@ -1,20 +1,40 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
-import { Users, Search } from "lucide-react";
+import { Users, Search, Plus, Trash2, X } from "lucide-react";
 
 interface UserProfile {
   id: string;
+  userId: string;
   name: string;
-  role: "ADMIN" | "STAFF";
-  createdAt: string;
+  role: string;
+  organizationId: string | null;
   organization: { name: string } | null;
+}
+
+interface Org {
+  id: string;
+  name: string;
+  slug: string;
 }
 
 export default function SuperAdminUsersPage() {
   const [users, setUsers] = useState<UserProfile[]>([]);
+  const [orgs, setOrgs] = useState<Org[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
+
+  const [showCreate, setShowCreate] = useState(false);
+  const [deleteId, setDeleteId] = useState<string | null>(null);
+  const [deleting, setDeleting] = useState(false);
+
+  const [formEmail, setFormEmail] = useState("");
+  const [formName, setFormName] = useState("");
+  const [formRole, setFormRole] = useState<"ADMIN" | "STAFF" | "MANAGER" | "VIEWER">("STAFF");
+  const [formOrgId, setFormOrgId] = useState("");
+  const [formPassword, setFormPassword] = useState("");
+  const [creating, setCreating] = useState(false);
+  const [error, setError] = useState("");
 
   const fetchUsers = useCallback(async () => {
     setLoading(true);
@@ -23,18 +43,75 @@ export default function SuperAdminUsersPage() {
     setLoading(false);
   }, []);
 
-  useEffect(() => { fetchUsers(); }, [fetchUsers]);
+  const fetchOrgs = useCallback(async () => {
+    const res = await fetch("/api/superadmin/organizations");
+    if (res.ok) setOrgs(await res.json());
+  }, []);
+
+  useEffect(() => { fetchUsers(); fetchOrgs(); }, [fetchUsers, fetchOrgs]);
+
+  const handleCreate = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError("");
+    setCreating(true);
+    const res = await fetch("/api/superadmin/users", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        email: formEmail,
+        name: formName,
+        role: formRole,
+        organizationId: formOrgId || undefined,
+        password: formPassword,
+      }),
+    });
+    const data = await res.json();
+    if (res.ok) {
+      setFormEmail(""); setFormName(""); setFormRole("STAFF"); setFormOrgId(""); setFormPassword("");
+      setShowCreate(false);
+      fetchUsers();
+    } else {
+      setError(data.error || "Error al crear usuario");
+    }
+    setCreating(false);
+  };
+
+  const handleDelete = async () => {
+    if (!deleteId) return;
+    setDeleting(true);
+    const res = await fetch(`/api/superadmin/users/${deleteId}`, { method: "DELETE" });
+    if (res.ok) {
+      setDeleteId(null);
+      fetchUsers();
+    }
+    setDeleting(false);
+  };
 
   const filtered = users.filter((u) =>
     u.name.toLowerCase().includes(search.toLowerCase()) ||
     (u.organization?.name ?? "").toLowerCase().includes(search.toLowerCase())
   );
 
+  const roleColors: Record<string, string> = {
+    ADMIN: "bg-brand-kinetic-orange/15 text-brand-kinetic-orange",
+    MANAGER: "bg-blue-500/15 text-blue-400",
+    STAFF: "bg-white/10 text-brand-muted",
+    VIEWER: "bg-purple-500/15 text-purple-400",
+  };
+
   return (
     <div className="p-8 max-w-5xl mx-auto space-y-8">
-      <header className="animate-pop">
-        <h1 className="text-4xl font-display font-bold text-white tracking-tight">Usuarios</h1>
-        <p className="text-brand-muted mt-1">Todos los usuarios en la plataforma</p>
+      <header className="animate-pop flex items-center justify-between">
+        <div>
+          <h1 className="text-4xl font-display font-bold text-white tracking-tight">Usuarios</h1>
+          <p className="text-brand-muted mt-1">Todos los usuarios en la plataforma</p>
+        </div>
+        <button
+          onClick={() => { setShowCreate(true); setError(""); }}
+          className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-gradient-to-br from-brand-kinetic-orange to-brand-kinetic-orange-light text-white text-sm font-semibold hover:opacity-90 transition-opacity"
+        >
+          <Plus size={16} /> Nuevo Usuario
+        </button>
       </header>
 
       <div className="relative animate-pop">
@@ -57,7 +134,7 @@ export default function SuperAdminUsersPage() {
                 <th className="p-5 text-brand-muted font-medium">Usuario</th>
                 <th className="p-5 text-brand-muted font-medium">Rol</th>
                 <th className="p-5 text-brand-muted font-medium">Organizacion</th>
-                <th className="p-5 text-brand-muted font-medium">Registro</th>
+                <th className="p-5 text-brand-muted font-medium">Acciones</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-white/5">
@@ -67,12 +144,20 @@ export default function SuperAdminUsersPage() {
                     <div className="font-bold text-white">{u.name}</div>
                   </td>
                   <td className="p-5">
-                    <span className={`px-3 py-1 rounded-full text-xs font-bold ${u.role === "ADMIN" ? "bg-brand-kinetic-orange/15 text-brand-kinetic-orange" : "bg-white/10 text-brand-muted"}`}>
+                    <span className={`px-3 py-1 rounded-full text-xs font-bold ${roleColors[u.role] ?? roleColors.STAFF}`}>
                       {u.role}
                     </span>
                   </td>
                   <td className="p-5 text-white text-sm">{u.organization?.name ?? <span className="text-brand-muted">—</span>}</td>
-                  <td className="p-5 text-brand-muted text-sm">{new Date(u.createdAt).toLocaleDateString("es-MX")}</td>
+                  <td className="p-5">
+                    <button
+                      onClick={() => setDeleteId(u.id)}
+                      className="p-2 rounded-lg hover:bg-red-500/10 text-brand-muted hover:text-red-400 transition-colors"
+                      title="Eliminar usuario"
+                    >
+                      <Trash2 size={16} />
+                    </button>
+                  </td>
                 </tr>
               ))}
               {filtered.length === 0 && (
@@ -91,6 +176,121 @@ export default function SuperAdminUsersPage() {
       <div className="text-right text-brand-muted text-sm animate-pop">
         {filtered.length} de {users.length} usuarios
       </div>
+
+      {/* Create Modal */}
+      {showCreate && (
+        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/70" onClick={() => setShowCreate(false)}>
+          <div
+            className="w-full sm:max-w-md bg-[#141414] border border-white/10 rounded-t-3xl sm:rounded-3xl p-6 sm:p-8 animate-pop"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between mb-6">
+              <h2 className="text-xl font-display font-bold text-white">Nuevo Usuario</h2>
+              <button onClick={() => setShowCreate(false)} className="text-brand-muted hover:text-white transition-colors">
+                <X size={20} />
+              </button>
+            </div>
+            <form onSubmit={handleCreate} className="space-y-4">
+              <div>
+                <label className="block text-sm text-brand-muted mb-1">Email</label>
+                <input
+                  type="email"
+                  value={formEmail}
+                  onChange={(e) => setFormEmail(e.target.value)}
+                  required
+                  className="w-full px-4 py-3 rounded-xl bg-white/5 border border-white/10 text-white focus:outline-none focus:border-brand-kinetic-orange transition-colors"
+                  placeholder="usuario@email.com"
+                />
+              </div>
+              <div>
+                <label className="block text-sm text-brand-muted mb-1">Nombre</label>
+                <input
+                  type="text"
+                  value={formName}
+                  onChange={(e) => setFormName(e.target.value)}
+                  required
+                  className="w-full px-4 py-3 rounded-xl bg-white/5 border border-white/10 text-white focus:outline-none focus:border-brand-kinetic-orange transition-colors"
+                  placeholder="Nombre completo"
+                />
+              </div>
+              <div>
+                <label className="block text-sm text-brand-muted mb-1">Contraseña</label>
+                <input
+                  type="password"
+                  value={formPassword}
+                  onChange={(e) => setFormPassword(e.target.value)}
+                  required
+                  minLength={8}
+                  className="w-full px-4 py-3 rounded-xl bg-white/5 border border-white/10 text-white focus:outline-none focus:border-brand-kinetic-orange transition-colors"
+                  placeholder="Minimo 8 caracteres"
+                />
+              </div>
+              <div>
+                <label className="block text-sm text-brand-muted mb-1">Rol</label>
+                <select
+                  value={formRole}
+                  onChange={(e) => setFormRole(e.target.value as typeof formRole)}
+                  className="w-full px-4 py-3 rounded-xl bg-white/5 border border-white/10 text-white focus:outline-none focus:border-brand-kinetic-orange transition-colors"
+                >
+                  <option value="ADMIN">ADMIN</option>
+                  <option value="MANAGER">MANAGER</option>
+                  <option value="STAFF">STAFF</option>
+                  <option value="VIEWER">VIEWER</option>
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm text-brand-muted mb-1">Organizacion (opcional)</label>
+                <select
+                  value={formOrgId}
+                  onChange={(e) => setFormOrgId(e.target.value)}
+                  className="w-full px-4 py-3 rounded-xl bg-white/5 border border-white/10 text-white focus:outline-none focus:border-brand-kinetic-orange transition-colors"
+                >
+                  <option value="">Sin organizacion</option>
+                  {orgs.map((o) => (
+                    <option key={o.id} value={o.id}>{o.name}</option>
+                  ))}
+                </select>
+              </div>
+              {error && <p className="text-red-400 text-sm">{error}</p>}
+              <button
+                type="submit"
+                disabled={creating}
+                className="w-full py-3 rounded-xl bg-gradient-to-br from-brand-kinetic-orange to-brand-kinetic-orange-light text-white font-semibold hover:opacity-90 transition-opacity disabled:opacity-50"
+              >
+                {creating ? "Creando..." : "Crear Usuario"}
+              </button>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Delete Confirmation Modal */}
+      {deleteId && (
+        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/70" onClick={() => setDeleteId(null)}>
+          <div
+            className="w-full sm:max-w-sm bg-[#141414] border border-white/10 rounded-t-3xl sm:rounded-3xl p-6 sm:p-8 animate-pop"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <h2 className="text-xl font-display font-bold text-white mb-2">Eliminar Usuario</h2>
+            <p className="text-brand-muted text-sm mb-6">Esta accion eliminara al usuario y su cuenta de Supabase. No se puede deshacer.</p>
+            <div className="flex gap-3">
+              <button
+                onClick={() => setDeleteId(null)}
+                className="flex-1 py-3 rounded-xl bg-white/5 border border-white/10 text-white font-medium hover:bg-white/10 transition-colors"
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={handleDelete}
+                disabled={deleting}
+                className="flex-1 py-3 rounded-xl bg-red-500 text-white font-semibold hover:bg-red-600 transition-colors disabled:opacity-50"
+              >
+                {deleting ? "Eliminando..." : "Eliminar"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
