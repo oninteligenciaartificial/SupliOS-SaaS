@@ -1,16 +1,27 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
-import { Layers, Plus, X, Pencil, Trash2 } from "lucide-react";
+import { Layers, Plus, X, Pencil, Trash2, Eye } from "lucide-react";
+import { BUSINESS_TYPE_LABELS, type BusinessType } from "@/lib/business-types";
 
 interface Category {
   id: string;
   name: string;
+  businessType: string;
   createdAt: string;
   _count: { products: number };
 }
 
 const inp = "w-full px-4 py-2.5 rounded-xl bg-white/5 border border-white/10 text-white placeholder-brand-muted focus:outline-none focus:border-brand-kinetic-orange transition-colors";
+
+const btColors: Record<string, string> = {
+  GENERAL: "bg-white/10 text-brand-muted",
+  ROPA: "bg-pink-500/15 text-pink-400",
+  SUPLEMENTOS: "bg-green-500/15 text-green-400",
+  ELECTRONICA: "bg-blue-500/15 text-blue-400",
+  FARMACIA: "bg-red-500/15 text-red-400",
+  FERRETERIA: "bg-yellow-500/15 text-yellow-400",
+};
 
 export default function CategoriesPage() {
   const [categories, setCategories] = useState<Category[]>([]);
@@ -21,13 +32,22 @@ export default function CategoriesPage() {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
   const [deleteId, setDeleteId] = useState<string | null>(null);
+  const [showAll, setShowAll] = useState(false);
+  const [currentBusinessType, setCurrentBusinessType] = useState<BusinessType>("GENERAL");
 
   const fetchCategories = useCallback(async () => {
     setLoading(true);
-    const res = await fetch("/api/categories");
-    if (res.ok) setCategories(await res.json());
+    const [catRes, meRes] = await Promise.all([
+      fetch(`/api/categories${showAll ? "?all=1" : ""}`),
+      fetch("/api/me"),
+    ]);
+    if (catRes.ok) setCategories(await catRes.json());
+    if (meRes.ok) {
+      const me = await meRes.json();
+      setCurrentBusinessType((me.organization?.businessType ?? "GENERAL") as BusinessType);
+    }
     setLoading(false);
-  }, []);
+  }, [showAll]);
 
   useEffect(() => { fetchCategories(); }, [fetchCategories]);
 
@@ -91,6 +111,25 @@ export default function CategoriesPage() {
         </button>
       </header>
 
+      <div className="flex items-center gap-3 animate-pop">
+        <button
+          onClick={() => setShowAll(!showAll)}
+          className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium border transition-all ${
+            showAll
+              ? "border-brand-kinetic-orange bg-brand-kinetic-orange/10 text-brand-kinetic-orange"
+              : "border-white/10 bg-white/5 text-brand-muted hover:border-white/20"
+          }`}
+        >
+          <Eye size={14} />
+          {showAll ? "Mostrando todas" : `Solo ${BUSINESS_TYPE_LABELS[currentBusinessType]}`}
+        </button>
+        {!showAll && (
+          <span className="text-xs text-brand-muted">
+            {categories.length} categorias de {BUSINESS_TYPE_LABELS[currentBusinessType]}
+          </span>
+        )}
+      </div>
+
       <div className="glass-panel rounded-2xl overflow-hidden animate-pop">
         {loading ? (
           <div className="py-16 text-center text-brand-muted">Cargando...</div>
@@ -99,8 +138,8 @@ export default function CategoriesPage() {
             <thead>
               <tr className="border-b border-white/10 bg-white/5">
                 <th className="p-5 text-brand-muted font-medium">Nombre</th>
+                <th className="p-5 text-brand-muted font-medium">Tipo</th>
                 <th className="p-5 text-brand-muted font-medium">Productos</th>
-                <th className="p-5 text-brand-muted font-medium">Creada</th>
                 <th className="p-5 text-brand-muted font-medium">Acciones</th>
               </tr>
             </thead>
@@ -109,11 +148,15 @@ export default function CategoriesPage() {
                 <tr key={c.id} className="hover:bg-white/[0.02] transition-colors">
                   <td className="p-5 font-bold text-white">{c.name}</td>
                   <td className="p-5">
+                    <span className={`px-3 py-1 rounded-full text-xs font-bold ${btColors[c.businessType] ?? btColors.GENERAL}`}>
+                      {BUSINESS_TYPE_LABELS[c.businessType as BusinessType] ?? c.businessType}
+                    </span>
+                  </td>
+                  <td className="p-5">
                     <span className="px-3 py-1 rounded-full text-xs font-medium bg-brand-kinetic-orange/10 text-brand-kinetic-orange">
                       {c._count.products} productos
                     </span>
                   </td>
-                  <td className="p-5 text-brand-muted text-sm">{new Date(c.createdAt).toLocaleDateString("es-MX")}</td>
                   <td className="p-5">
                     <div className="flex items-center gap-2">
                       <button onClick={() => openEdit(c)} className="p-2 rounded-lg hover:bg-white/10 text-brand-muted hover:text-white transition-colors">
@@ -130,7 +173,7 @@ export default function CategoriesPage() {
                 <tr>
                   <td colSpan={4} className="py-16 text-center text-brand-muted">
                     <Layers size={40} className="mx-auto mb-3 opacity-30" />
-                    <p>No hay categorias creadas.</p>
+                    <p>{showAll ? "No hay categorias creadas." : `No hay categorias de ${BUSINESS_TYPE_LABELS[currentBusinessType]}.`}</p>
                   </td>
                 </tr>
               )}
@@ -149,7 +192,8 @@ export default function CategoriesPage() {
             <form onSubmit={handleSave} className="space-y-4">
               <div className="space-y-1.5">
                 <label className="text-sm text-brand-muted">Nombre *</label>
-                <input required value={name} onChange={(e) => setName(e.target.value)} className={inp} placeholder="Proteinas, Vitaminas, etc." />
+                <input required value={name} onChange={(e) => setName(e.target.value)} className={inp} placeholder="ej: Proteinas, Vitaminas..." />
+                <p className="text-xs text-brand-muted mt-1">Se asignara automaticamente a {BUSINESS_TYPE_LABELS[currentBusinessType]}</p>
               </div>
               {error && <p className="text-red-400 text-sm">{error}</p>}
               <button type="submit" disabled={saving} className="w-full py-3 rounded-xl bg-gradient-to-br from-brand-kinetic-orange to-brand-kinetic-orange-light text-black font-bold disabled:opacity-50">

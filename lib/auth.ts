@@ -21,7 +21,7 @@ export async function getTenantProfile() {
     if (impersonateOrgId) {
       const org = await prisma.organization.findUnique({
         where: { id: impersonateOrgId },
-        select: { plan: true, planExpiresAt: true, trialEndsAt: true },
+        select: { plan: true, planExpiresAt: true, trialEndsAt: true, businessType: true },
       });
       const result = {
         ...profile,
@@ -30,6 +30,7 @@ export async function getTenantProfile() {
         plan: (org?.plan ?? "BASICO") as PlanType,
         planExpiresAt: org?.planExpiresAt ?? null,
         trialEndsAt: org?.trialEndsAt ?? null,
+        businessType: org?.businessType ?? "GENERAL",
       };
       // Set Sentry user context for error tracking
       setSentryUser({
@@ -48,7 +49,7 @@ export async function getTenantProfile() {
   if (profile.organizationId) {
     const org = await prisma.organization.findUnique({
       where: { id: profile.organizationId },
-      select: { plan: true, planExpiresAt: true, trialEndsAt: true },
+      select: { plan: true, planExpiresAt: true, trialEndsAt: true, businessType: true },
     });
     const result = {
       ...profile,
@@ -56,6 +57,7 @@ export async function getTenantProfile() {
       plan: (org?.plan ?? "BASICO") as PlanType,
       planExpiresAt: org?.planExpiresAt ?? null,
       trialEndsAt: org?.trialEndsAt ?? null,
+      businessType: org?.businessType ?? "GENERAL",
     };
     // Set Sentry user context for error tracking
     setSentryUser({

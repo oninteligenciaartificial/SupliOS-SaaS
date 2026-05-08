@@ -5,12 +5,20 @@ import { z } from "zod";
 
 const schema = z.object({ name: z.string().min(1) });
 
-export async function GET() {
+export async function GET(request: Request) {
   const profile = await getTenantProfile();
   if (!profile) return NextResponse.json({ error: "No autorizado" }, { status: 401 });
 
+  const { searchParams } = new URL(request.url);
+  const showAll = searchParams.get("all") === "1";
+
+  const where: Record<string, unknown> = { organizationId: profile.organizationId };
+  if (!showAll) {
+    where.businessType = profile.businessType ?? "GENERAL";
+  }
+
   const categories = await prisma.category.findMany({
-    where: { organizationId: profile.organizationId },
+    where,
     include: { _count: { select: { products: true } } },
     orderBy: { name: "asc" },
   });
@@ -31,7 +39,11 @@ export async function POST(request: Request) {
   if (!result.success) return NextResponse.json({ error: "Datos invalidos" }, { status: 400 });
 
   const category = await prisma.category.create({
-    data: { organizationId: profile.organizationId, name: result.data.name.trim() },
+    data: {
+      organizationId: profile.organizationId,
+      name: result.data.name.trim(),
+      businessType: profile.businessType ?? "GENERAL",
+    },
   });
 
   return NextResponse.json(category, { status: 201 });
