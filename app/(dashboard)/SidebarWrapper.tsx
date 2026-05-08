@@ -19,9 +19,10 @@ interface Props {
   role: string;
   plan: PlanType | null;
   planExpiresAt: string | null;
+  lockedPlanMap?: Record<string, PlanType>;
 }
 
-export function SidebarWrapper({ links, lockedHrefs, orgName, isSuperAdmin, isImpersonating, name, email, role, plan, planExpiresAt }: Props) {
+export function SidebarWrapper({ links, lockedHrefs, orgName, isSuperAdmin, isImpersonating, name, email, role, plan, planExpiresAt, lockedPlanMap }: Props) {
   const [open, setOpen] = useState(false);
 
   const planMeta = plan ? PLAN_META[plan] : null;
@@ -85,7 +86,7 @@ export function SidebarWrapper({ links, lockedHrefs, orgName, isSuperAdmin, isIm
           </button>
         </div>
 
-        <SidebarNav links={internalLinks} lockedHrefs={lockedHrefs} onNavigate={() => setOpen(false)} />
+        <SidebarNav links={internalLinks} lockedHrefs={lockedHrefs} onNavigate={() => setOpen(false)} lockedPlanMap={lockedPlanMap} />
 
         {externalLinks.length > 0 && (
           <div className="flex flex-col gap-1 border-t border-white/5 pt-4">

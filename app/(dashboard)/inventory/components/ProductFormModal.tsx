@@ -21,6 +21,7 @@ interface Props {
   attrKeys: string[];
   attrSchema: Record<string, string[]>;
   ui: BusinessUIConfig;
+  canUseVariants: boolean;
   onFormChange: (f: ProductForm) => void;
   onSubmit: (e: React.FormEvent) => void;
   onAddVariant: (e: React.FormEvent) => void;
@@ -35,7 +36,7 @@ interface Props {
 export function ProductFormModal({
   editing, form, categories, variants, showVariants, variantForm, variantAttrs,
   saving, savingVariant, uploadingImage, formError, variantError,
-  attrKeys, attrSchema, ui,
+  attrKeys, attrSchema, ui, canUseVariants,
   onFormChange, onSubmit, onAddVariant, onDeleteVariant,
   onVariantFormChange, onVariantAttrsChange, onShowVariantsToggle,
   onImageUpload, onClose,
@@ -99,22 +100,34 @@ export function ProductFormModal({
             </div>
 
             {attrKeys.length > 0 && (
-              <div className="flex items-center justify-between p-3 rounded-xl bg-white/5 border border-white/10">
-                <div className="flex items-center gap-2">
-                  <Layers size={15} className="text-blue-400" />
-                  <div>
-                    <p className="text-sm text-white font-medium">{ui.variantLabel}</p>
-                    <p className="text-xs text-brand-muted">{ui.posVariantHint}</p>
+              canUseVariants ? (
+                <div className="flex items-center justify-between p-3 rounded-xl bg-white/5 border border-white/10">
+                  <div className="flex items-center gap-2">
+                    <Layers size={15} className="text-blue-400" />
+                    <div>
+                      <p className="text-sm text-white font-medium">{ui.variantLabel}</p>
+                      <p className="text-xs text-brand-muted">{ui.posVariantHint}</p>
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => onFormChange({ ...form, hasVariants: !form.hasVariants })}
+                    className={`relative w-11 h-6 rounded-full transition-colors flex-shrink-0 ${form.hasVariants ? "bg-blue-500" : "bg-white/20"}`}
+                  >
+                    <span className={`absolute top-1 w-4 h-4 rounded-full bg-white transition-transform ${form.hasVariants ? "translate-x-6" : "translate-x-1"}`} />
+                  </button>
+                </div>
+              ) : (
+                <div className="flex items-center justify-between p-3 rounded-xl bg-white/5 border border-white/10 opacity-50">
+                  <div className="flex items-center gap-2">
+                    <Layers size={15} className="text-brand-muted" />
+                    <div>
+                      <p className="text-sm text-brand-muted font-medium">{ui.variantLabel}</p>
+                      <p className="text-xs text-brand-muted">Requiere plan Crecer o superior</p>
+                    </div>
                   </div>
                 </div>
-                <button
-                  type="button"
-                  onClick={() => onFormChange({ ...form, hasVariants: !form.hasVariants })}
-                  className={`relative w-11 h-6 rounded-full transition-colors flex-shrink-0 ${form.hasVariants ? "bg-blue-500" : "bg-white/20"}`}
-                >
-                  <span className={`absolute top-1 w-4 h-4 rounded-full bg-white transition-transform ${form.hasVariants ? "translate-x-6" : "translate-x-1"}`} />
-                </button>
-              </div>
+              )
             )}
 
             {!form.hasVariants && (
@@ -191,7 +204,7 @@ export function ProductFormModal({
             </button>
           </form>
 
-          {editing && form.hasVariants && (
+          {editing && form.hasVariants && canUseVariants && (
             <div className="border-t border-white/10 pt-4 space-y-3">
               <button onClick={onShowVariantsToggle} className="w-full flex items-center justify-between text-sm font-bold text-blue-400 hover:text-blue-300 transition-colors">
                 <span className="flex items-center gap-2"><Layers size={14} /> Gestionar variantes ({variants.length})</span>

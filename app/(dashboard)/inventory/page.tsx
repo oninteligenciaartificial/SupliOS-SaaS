@@ -1,9 +1,10 @@
 "use client";
 
 import { useState, useEffect, useCallback, useRef } from "react";
-import { Search, Plus, Upload, Download } from "lucide-react";
+import { Search, Plus, Upload, Download, Lock } from "lucide-react";
 import { getBusinessSchema, type BusinessType } from "@/lib/business-types";
 import { getBusinessUI } from "@/lib/business-ui";
+import { isPlanAtLeast, type PlanType } from "@/lib/plans";
 import { ProductTable } from "./components/ProductTable";
 import { ProductFormModal } from "./components/ProductFormModal";
 import { StockEntryModal } from "./components/StockEntryModal";
@@ -17,6 +18,7 @@ export default function Inventory() {
   const [products, setProducts] = useState<Product[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [businessType, setBusinessType] = useState<BusinessType>("GENERAL");
+  const [activePlan, setActivePlan] = useState<PlanType>("BASICO");
   const [search, setSearch] = useState("");
   const [loading, setLoading] = useState(true);
 
@@ -54,6 +56,7 @@ export default function Inventory() {
     if (meRes.ok) {
       const me = await meRes.json();
       setBusinessType((me.organization?.businessType ?? "GENERAL") as BusinessType);
+      setActivePlan((me.organization?.plan ?? "BASICO") as PlanType);
     }
     setLoading(false);
   }, []);
@@ -240,6 +243,7 @@ export default function Inventory() {
   const attrSchema = getBusinessSchema(businessType);
   const attrKeys = Object.keys(attrSchema);
   const ui = getBusinessUI(businessType);
+  const canUseVariants = isPlanAtLeast(activePlan, "CRECER");
 
   const filtered = products
     .filter((p) => p.name.toLowerCase().includes(search.toLowerCase()) || (p.sku ?? "").toLowerCase().includes(search.toLowerCase()))
@@ -316,6 +320,7 @@ export default function Inventory() {
           attrKeys={attrKeys}
           attrSchema={attrSchema}
           ui={ui}
+          canUseVariants={canUseVariants}
           onFormChange={setForm}
           onSubmit={handleSave}
           onAddVariant={handleAddVariant}

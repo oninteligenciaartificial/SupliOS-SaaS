@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { getTenantProfile } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { Prisma } from "@prisma/client";
-import { PLAN_LIMITS } from "@/lib/plans";
+import { PLAN_LIMITS, isPlanAtLeast } from "@/lib/plans";
 import { hasPermission } from "@/lib/permissions";
 import { checkOrgRateLimit } from "@/lib/rate-limit";
 import { z } from "zod";
@@ -85,6 +85,10 @@ export async function POST(request: Request) {
 
   const result = createSchema.safeParse(body);
   if (!result.success) return NextResponse.json({ error: "Datos invalidos", details: result.error.issues }, { status: 400 });
+
+  if (result.data.hasVariants && !isPlanAtLeast(profile.plan, "CRECER")) {
+    return NextResponse.json({ error: "Las variantes de productos requieren el plan Crecer o superior.", upgrade: true, requiredPlan: "CRECER" }, { status: 403 });
+  }
 
   const { name, description, sku, barcode, unit, categoryId, supplierId, price, cost, stock, minStock, batchExpiry, imageUrl, hasVariants, attributeSchema } = result.data;
 

@@ -3,6 +3,7 @@
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
 import { Lock } from "lucide-react";
+import { FEATURE_PLAN, PLAN_META, type PlanType } from "@/lib/plans";
 
 interface NavLink { href: string; label: string }
 
@@ -10,9 +11,16 @@ interface Props {
   links: NavLink[];
   lockedHrefs: string[];
   onNavigate?: () => void;
+  lockedPlanMap?: Record<string, PlanType>;
 }
 
-export function SidebarNav({ links, lockedHrefs, onNavigate }: Props) {
+const hrefFeatureMap: Record<string, string> = {
+  "/reports": "reports",
+  "/suppliers": "suppliers",
+  "/branches": "sucursales",
+};
+
+export function SidebarNav({ links, lockedHrefs, onNavigate, lockedPlanMap }: Props) {
   const pathname = usePathname();
   const [criticalStock, setCriticalStock] = useState(0);
   const lockedSet = new Set(lockedHrefs);
@@ -33,16 +41,24 @@ export function SidebarNav({ links, lockedHrefs, onNavigate }: Props) {
     return pathname.startsWith(href);
   }
 
+  function getRequiredPlanLabel(href: string): string {
+    if (lockedPlanMap?.[href]) return PLAN_META[lockedPlanMap[href]].label;
+    const feature = hrefFeatureMap[href];
+    if (feature && FEATURE_PLAN[feature]) return PLAN_META[FEATURE_PLAN[feature]].label;
+    return "";
+  }
+
   return (
     <nav className="flex flex-col gap-1 flex-1">
       {links.map((link) => {
         const locked = lockedSet.has(link.href);
 
         if (locked) {
+          const requiredPlan = getRequiredPlanLabel(link.href);
           return (
             <div
               key={link.href}
-              title="Actualiza tu plan para usar esta funcion"
+              title={requiredPlan ? `Requiere plan ${requiredPlan}` : "Actualiza tu plan para usar esta funcion"}
               className="px-4 py-3 rounded-xl text-sm font-medium flex items-center justify-between opacity-40 cursor-not-allowed select-none"
             >
               <span className="text-brand-muted">{link.label}</span>

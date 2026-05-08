@@ -4,7 +4,9 @@ import { redirect } from "next/navigation";
 import { cookies } from "next/headers";
 import { SidebarWrapper } from "./SidebarWrapper";
 import { ImpersonationBanner } from "./ImpersonationBanner";
-import { canUseFeature, type PlanType } from "@/lib/plans";
+import { canUseFeature, isPlanAtLeast, FEATURE_PLAN, type PlanType } from "@/lib/plans";
+import { getBusinessUI, type BusinessUIConfig } from "@/lib/business-ui";
+import type { BusinessType } from "@/lib/business-types";
 
 export default async function DashboardLayout({
   children,
@@ -25,6 +27,7 @@ export default async function DashboardLayout({
           plan: true,
           planExpiresAt: true,
           trialEndsAt: true,
+          businessType: true,
           addons: { select: { addon: true, active: true } },
         },
       },
@@ -91,21 +94,29 @@ export default async function DashboardLayout({
 
   const showBranches = canUseFeature(activePlan, "sucursales");
 
+  // Resolve business type for dynamic sidebar labels
+  const businessType = (profile.organization?.businessType ?? "GENERAL") as BusinessType;
+  const ui: BusinessUIConfig = getBusinessUI(businessType);
+
   const tenantLinks = [
     { href: "/dashboard", label: "Dashboard" },
     { href: "/pos", label: "Punto de Venta" },
-    { href: "/inventory", label: "Inventario" },
+    { href: "/inventory", label: ui.sidebarLabels.inventory },
     { href: "/orders", label: "Pedidos" },
     { href: "/customers", label: "Clientes" },
     { href: "/reports", label: "Reportes" },
     { href: "/caja", label: "Corte de Caja" },
-    { href: "/suppliers", label: "Proveedores" },
+    { href: "/suppliers", label: ui.sidebarLabels.suppliers },
     { href: "/discounts", label: "Descuentos" },
-    { href: "/categories", label: "Categorias" },
+    { href: "/categories", label: ui.sidebarLabels.categories },
     ...(showBranches ? [{ href: "/branches", label: "Sucursales" }] : []),
     ...(hasWhatsApp ? [{ href: "/conversations", label: "WhatsApp" }] : []),
     ...(!isImpersonating && (profile.role === "ADMIN" || profile.role === "MANAGER") ? [{ href: "/staff", label: "Equipo" }] : []),
-    ...(isImpersonating ? [] : [{ href: "/settings", label: "Configuracion" }]),
+    ...(!isImpersonating ? ui.extraSections
+      .filter(s => !s.minPlan || isPlanAtLeast(activePlan, s.minPlan as PlanType))
+      .map(s => ({ href: s.href, label: s.label }))
+    : []),
+    ...(!isImpersonating ? [{ href: "/settings", label: "Configuracion" }] : []),
   ];
 
   const navLinks = isSuperAdmin ? [...superAdminLinks, ...externalLinks] : tenantLinks;
@@ -118,6 +129,12 @@ export default async function DashboardLayout({
   } else {
     orgDisplayName = profile.organization?.name ?? "";
   }
+
+  const lockedPlanMap: Record<string, PlanType> = isSuperAdmin ? {} : Object.fromEntries(
+    Object.entries(featureHrefMap)
+      .filter(([feature]) => !canUseFeature(activePlan, feature))
+      .map(([feature, href]) => [href, FEATURE_PLAN[feature]])
+  ) as Record<string, PlanType>;
 
   return (
     <div className="flex h-screen overflow-hidden">
@@ -132,6 +149,7 @@ export default async function DashboardLayout({
         role={profile.role}
         plan={isSuperAdmin ? null : activePlan}
         planExpiresAt={isSuperAdmin ? null : (profile.organization?.planExpiresAt?.toISOString() ?? null)}
+        lockedPlanMap={lockedPlanMap}
       />
       <main className="flex-1 w-full overflow-y-auto">
         {isImpersonating && impersonateOrgName && (

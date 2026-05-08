@@ -1,5 +1,47 @@
 ---
 
+## 2026-05-08 (sesión noche) — Sidebar dinámico + Plan gating completo
+
+### Feat: Sidebar dinámico por tipo de negocio
+
+**Problema:** Cambiar tipo de negocio en Settings no actualizaba nada en la UI.
+
+**Fix:**
+- `lib/business-ui.ts` — Agregados `sidebarLabels` (inventory, categories, suppliers) y `extraSections` por negocio
+- `app/(dashboard)/layout.tsx` — Lee `businessType` del org y usa `getBusinessUI()` para labels dinámicos del sidebar
+- FARMACIA → "Inventario Farmacia", "Laboratorios", "Laboratorios" + sección "Vencimientos"
+- ROPA → "Catálogo de Ropa", "Colecciones", "Marcas"
+- ELECTRONICA → "Inventario", "Marcas", "Distribuidores" + sección "Garantías"
+- SUPLEMENTOS → "Catálogo de Suplementos", "Líneas", "Marcas" + sección "Vencimientos"
+
+### Feat: Refresh inmediato tras cambiar businessType
+
+**Fix:** `app/(dashboard)/settings/page.tsx` — `router.refresh()` + re-fetch `/api/me` tras guardar. Mensaje: "Navegá a Inventario para ver los cambios."
+
+### Feat: Tabla comparativa de planes
+
+**Fix:** `app/(dashboard)/billing/page.tsx` — Sección colapsable "Comparar planes" con tabla de 22 features × 4 planes (checkmarks/cruces)
+
+### Feat: Tooltips en items bloqueados del sidebar
+
+**Fix:** `app/(dashboard)/SidebarNav.tsx` — Items bloqueados muestran "Requiere plan Crecer" en vez de genérico
+
+### Feat: PLAN_FEATURES en lib/plans.ts
+
+**Nuevo:** `PLAN_FEATURES` con lista descriptiva de features por plan para uso en UI y documentación.
+
+### Feat: Gate de variantes por plan
+
+- `app/(dashboard)/inventory/page.tsx` — Toggle de variantes muestra "Requiere plan Crecer" si BASICO
+- `app/(dashboard)/inventory/components/ProductFormModal.tsx` — Sección de gestión de variantes oculta si BASICO
+- `app/api/products/route.ts` — Rechaza `hasVariants: true` con 403 si plan BASICO
+
+### Fix: Validación de businessType en API
+
+**Fix:** `app/api/me/route.ts` — `orgBusinessType` ahora usa `z.enum([...])` en vez de `z.string()`
+
+---
+
 ## 2026-05-08 (sesión mañana)
 
 ### Fix: Variant labels unificados a "Variantes"

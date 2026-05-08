@@ -77,3 +77,45 @@ export function limitGateError(resource: string, limit: number, plan: PlanType):
     limit,
   };
 }
+
+export const PLAN_FEATURES: Record<PlanType, string[]> = {
+  BASICO: [
+    "Dashboard",
+    "Punto de Venta",
+    "Inventario (sin variantes)",
+    "Pedidos",
+    "Clientes (50 max)",
+    "Corte de Caja",
+    "Descuentos (3 max)",
+    "Categorias",
+  ],
+  CRECER: [
+    "Todo lo del plan Básico",
+    "Reportes avanzados",
+    "Proveedores",
+    "Import/Export CSV",
+    "Variantes de productos",
+    "Descuentos ilimitados",
+    "Clientes (300 max)",
+    "Vencimientos (Farmacia/Suplementos)",
+  ],
+  PRO: [
+    "Todo lo del plan Crecer",
+    "Tienda Online",
+    "Registro Público de clientes",
+    "Pagos QR Bolivia",
+    "Email marketing",
+    "Clientes ilimitados",
+    "Productos ilimitados",
+    "Garantías (Electrónica)",
+  ],
+  EMPRESARIAL: [
+    "Todo lo del plan Pro",
+    "Sucursales multiples",
+    "Auditoría completa (Audit Log)",
+    "Facturación SIAT Bolivia",
+    "Roles avanzados",
+    "Equipo ilimitado",
+    "Email avanzado",
+  ],
+};

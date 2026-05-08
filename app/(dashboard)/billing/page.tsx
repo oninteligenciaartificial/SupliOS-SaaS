@@ -1,13 +1,38 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { PLAN_META, PLAN_PRICES_BOB, ADDON_META, type PlanType } from "@/lib/plans";
+import { PLAN_META, PLAN_PRICES_BOB, PLAN_FEATURES, ADDON_META, type PlanType } from "@/lib/plans";
 import { Check, QrCode, Copy, MessageCircle, ChevronDown, ChevronUp, Trash2, Zap, X } from "lucide-react";
 
 const PLANS: PlanType[] = ["BASICO", "CRECER", "PRO", "EMPRESARIAL"];
 const ALL_ADDONS = ["WHATSAPP", "FACTURACION", "QR_BOLIVIA", "ECOMMERCE", "CONTABILIDAD"] as const;
 type AddonType = typeof ALL_ADDONS[number];
 const WA_NUMBER = "59175470140";
+
+const ALL_FEATURES: { label: string; plans: PlanType[] }[] = [
+  { label: "Dashboard", plans: ["BASICO", "CRECER", "PRO", "EMPRESARIAL"] },
+  { label: "Punto de Venta", plans: ["BASICO", "CRECER", "PRO", "EMPRESARIAL"] },
+  { label: "Inventario", plans: ["BASICO", "CRECER", "PRO", "EMPRESARIAL"] },
+  { label: "Variantes de productos", plans: ["CRECER", "PRO", "EMPRESARIAL"] },
+  { label: "Pedidos", plans: ["BASICO", "CRECER", "PRO", "EMPRESARIAL"] },
+  { label: "Clientes", plans: ["BASICO", "CRECER", "PRO", "EMPRESARIAL"] },
+  { label: "Corte de Caja", plans: ["BASICO", "CRECER", "PRO", "EMPRESARIAL"] },
+  { label: "Descuentos ilimitados", plans: ["CRECER", "PRO", "EMPRESARIAL"] },
+  { label: "Categorias", plans: ["BASICO", "CRECER", "PRO", "EMPRESARIAL"] },
+  { label: "Reportes avanzados", plans: ["CRECER", "PRO", "EMPRESARIAL"] },
+  { label: "Proveedores", plans: ["CRECER", "PRO", "EMPRESARIAL"] },
+  { label: "Import/Export CSV", plans: ["CRECER", "PRO", "EMPRESARIAL"] },
+  { label: "Vencimientos", plans: ["CRECER", "PRO", "EMPRESARIAL"] },
+  { label: "Tienda Online", plans: ["PRO", "EMPRESARIAL"] },
+  { label: "Registro Público", plans: ["PRO", "EMPRESARIAL"] },
+  { label: "Pagos QR Bolivia", plans: ["PRO", "EMPRESARIAL"] },
+  { label: "Email marketing", plans: ["PRO", "EMPRESARIAL"] },
+  { label: "Garantías", plans: ["PRO", "EMPRESARIAL"] },
+  { label: "Sucursales multiples", plans: ["EMPRESARIAL"] },
+  { label: "Auditoría (Audit Log)", plans: ["EMPRESARIAL"] },
+  { label: "Facturación SIAT", plans: ["EMPRESARIAL"] },
+  { label: "Roles avanzados", plans: ["EMPRESARIAL"] },
+];
 
 const ADDON_WA_MSG: Record<AddonType, string> = {
   WHATSAPP:    "Hola! Me interesa activar el add-on *WhatsApp Business* ($40/mes) en GestiOS. ¿Cómo procedo?",
@@ -49,6 +74,7 @@ export default function BillingPage() {
   const [addons, setAddons] = useState<{ addon: AddonType; active: boolean }[]>([]);
   const [copied, setCopied] = useState(false);
   const [showHistory, setShowHistory] = useState(false);
+  const [showComparison, setShowComparison] = useState(false);
   const [cancelling, setCancelling] = useState<string | null>(null);
 
   const pricePerMonth = PLAN_PRICES_BOB[selectedPlan];
@@ -224,6 +250,54 @@ export default function BillingPage() {
               Se abrirá WhatsApp con un mensaje listo para enviar
             </p>
           </div>
+        </div>
+
+        {/* Tabla comparativa de planes */}
+        <div className="glass-panel rounded-2xl overflow-hidden">
+          <button
+            onClick={() => setShowComparison(!showComparison)}
+            className="w-full flex items-center justify-between p-5 text-left hover:bg-white/[0.02] transition-colors"
+          >
+            <div className="flex items-center gap-3">
+              <span className="text-sm font-bold text-brand-muted uppercase tracking-wider">Comparar planes</span>
+            </div>
+            {showComparison ? <ChevronUp size={16} className="text-brand-muted" /> : <ChevronDown size={16} className="text-brand-muted" />}
+          </button>
+
+          {showComparison && (
+            <div className="px-5 pb-5 border-t border-white/5">
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="border-b border-white/5">
+                      <th className="text-left py-3 px-2 text-brand-muted font-medium">Feature</th>
+                      {PLANS.map(p => (
+                        <th key={p} className={`text-center py-3 px-2 font-bold text-xs ${PLAN_META[p].color}`}>
+                          {PLAN_META[p].label}
+                        </th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {ALL_FEATURES.map((feat, i) => (
+                      <tr key={i} className="border-b border-white/5 last:border-0">
+                        <td className="py-2.5 px-2 text-white">{feat.label}</td>
+                        {PLANS.map(p => (
+                          <td key={p} className="text-center py-2.5 px-2">
+                            {feat.plans.includes(p) ? (
+                              <Check size={14} className="text-brand-growth-neon mx-auto" />
+                            ) : (
+                              <X size={14} className="text-white/20 mx-auto" />
+                            )}
+                          </td>
+                        ))}
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Instrucciones + QR */}

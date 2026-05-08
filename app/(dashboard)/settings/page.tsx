@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import { User, Building2, Lock, Save, Activity, Link, Copy, Check, CreditCard, Receipt, Package, ChevronRight } from "lucide-react";
 import { PLAN_META, type PlanType } from "@/lib/plans";
 import { BUSINESS_TYPES, BUSINESS_TYPE_LABELS, BUSINESS_TYPE_SCHEMAS } from "@/lib/business-types";
@@ -57,6 +58,7 @@ const TABS: { id: Tab; label: string; icon: React.ReactNode }[] = [
 ];
 
 export default function SettingsPage() {
+  const router = useRouter();
   const [profile, setProfile] = useState<Profile | null>(null);
   const [activeTab, setActiveTab] = useState<Tab>("perfil");
   const [name, setName] = useState("");
@@ -104,7 +106,14 @@ export default function SettingsPage() {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ name, orgName, orgPhone, orgAddress, orgRfc, orgLogoUrl, orgCurrency, orgBusinessType }),
     });
-    setMsg(res.ok ? "Cambios guardados." : "Error al guardar.");
+    if (res.ok) {
+      const updated = await fetch("/api/me").then(r => r.json());
+      setProfile(updated);
+      setMsg("Cambios guardados. Navegá a Inventario para ver los cambios del tipo de negocio.");
+      router.refresh();
+    } else {
+      setMsg("Error al guardar.");
+    }
     setSaving(false);
   }
 

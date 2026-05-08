@@ -1,7 +1,6 @@
 import type { BusinessType } from "./business-types";
 
 export interface BusinessUIConfig {
-  // Labels generales
   productSingular: string;
   productPlural: string;
   categoryLabel: string;
@@ -10,32 +9,26 @@ export interface BusinessUIConfig {
   stockLabel: string;
   variantLabel: string;
   supplierLabel: string;
-
-  // Placeholders
   searchPlaceholder: string;
   namePlaceholder: string;
   unitPlaceholder: string;
-
-  // Opciones de unidad de medida específicas por tipo de negocio
   unitOptions: string[];
-
-  // Placeholders por atributo de variante (clave = nombre del atributo en minúsculas)
   attrPlaceholders: Record<string, string>;
-
-  // Visibilidad de campos en el formulario
-  showBatchExpiry: boolean;      // prominente para FARMACIA y SUPLEMENTOS
+  showBatchExpiry: boolean;
   showBarcode: boolean;
   showUnit: boolean;
-
-  // Textos de la página de inventario
   pageTitle: string;
   pageSubtitle: string;
   newButtonLabel: string;
   emptyStateMessage: string;
-
-  // Textos en POS
   posProductLabel: string;
   posVariantHint: string;
+  sidebarLabels: {
+    inventory: string;
+    categories: string;
+    suppliers: string;
+  };
+  extraSections: { href: string; label: string; minPlan?: string }[];
 }
 
 const CONFIGS: Record<BusinessType, BusinessUIConfig> = {
@@ -62,6 +55,8 @@ const CONFIGS: Record<BusinessType, BusinessUIConfig> = {
     emptyStateMessage: "Aún no tienes productos. Crea el primero.",
     posProductLabel: "Producto",
     posVariantHint: "Selecciona una variante",
+    sidebarLabels: { inventory: "Inventario", categories: "Categorias", suppliers: "Proveedores" },
+    extraSections: [],
   },
   ROPA: {
     productSingular: "Prenda",
@@ -86,6 +81,8 @@ const CONFIGS: Record<BusinessType, BusinessUIConfig> = {
     emptyStateMessage: "Aún no tienes prendas en el catálogo. Agrega la primera.",
     posProductLabel: "Prenda",
     posVariantHint: "Selecciona talla y color",
+    sidebarLabels: { inventory: "Catálogo de Ropa", categories: "Colecciones", suppliers: "Marcas" },
+    extraSections: [],
   },
   SUPLEMENTOS: {
     productSingular: "Suplemento",
@@ -110,6 +107,8 @@ const CONFIGS: Record<BusinessType, BusinessUIConfig> = {
     emptyStateMessage: "Aún no tienes suplementos. Agrega el primero.",
     posProductLabel: "Suplemento",
     posVariantHint: "Selecciona sabor y peso",
+    sidebarLabels: { inventory: "Catálogo de Suplementos", categories: "Líneas", suppliers: "Marcas" },
+    extraSections: [{ href: "/inventory?vencimientos=1", label: "Vencimientos", minPlan: "CRECER" }],
   },
   ELECTRONICA: {
     productSingular: "Producto",
@@ -134,6 +133,8 @@ const CONFIGS: Record<BusinessType, BusinessUIConfig> = {
     emptyStateMessage: "Aún no tienes productos. Crea el primero.",
     posProductLabel: "Producto",
     posVariantHint: "Selecciona capacidad y color",
+    sidebarLabels: { inventory: "Inventario", categories: "Marcas", suppliers: "Distribuidores" },
+    extraSections: [{ href: "/inventory?garantias=1", label: "Garantías", minPlan: "PRO" }],
   },
   FARMACIA: {
     productSingular: "Medicamento",
@@ -158,6 +159,8 @@ const CONFIGS: Record<BusinessType, BusinessUIConfig> = {
     emptyStateMessage: "Aún no tienes medicamentos. Agrega el primero.",
     posProductLabel: "Medicamento",
     posVariantHint: "Selecciona presentación y dosis",
+    sidebarLabels: { inventory: "Inventario Farmacia", categories: "Laboratorios", suppliers: "Laboratorios" },
+    extraSections: [{ href: "/inventory?vencimientos=1", label: "Vencimientos", minPlan: "CRECER" }],
   },
   FERRETERIA: {
     productSingular: "Material",
@@ -182,6 +185,8 @@ const CONFIGS: Record<BusinessType, BusinessUIConfig> = {
     emptyStateMessage: "Aún no tienes materiales. Agrega el primero.",
     posProductLabel: "Material",
     posVariantHint: "Selecciona medida y material",
+    sidebarLabels: { inventory: "Inventario", categories: "Áreas", suppliers: "Proveedores" },
+    extraSections: [],
   },
 };
 

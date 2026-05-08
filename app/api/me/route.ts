@@ -36,6 +36,8 @@ export async function GET() {
   return NextResponse.json({ ...profile, email: user.email, activeAddons: addons.map((a) => a.addon) });
 }
 
+import { BUSINESS_TYPES } from "@/lib/business-types";
+
 const patchSchema = z.object({
   name: z.string().min(1).optional(),
   orgName: z.string().min(1).optional(),
@@ -44,7 +46,7 @@ const patchSchema = z.object({
   orgRfc: z.string().optional(),
   orgLogoUrl: z.string().optional(),
   orgCurrency: z.string().optional(),
-  orgBusinessType: z.string().optional(),
+  orgBusinessType: z.enum(["GENERAL", "ROPA", "SUPLEMENTOS", "ELECTRONICA", "FARMACIA", "FERRETERIA"] as const).optional(),
 });
 
 export async function PATCH(request: Request) {
