@@ -1,5 +1,38 @@
 ---
 
+## 2026-05-08 (sesión mañana)
+
+### Fix: Variant labels unificados a "Variantes"
+
+**Problema:** Labels como `"Sabor / Peso"`, `"Talla / Color"`, `"Capacidad / Color"` eran confusos — parecían indicar una elección entre dos opciones en lugar de atributos combinables.
+
+**Fix:** Todos los `variantLabel` en `lib/business-ui.ts` cambiados a `"Variantes"`. El subtítulo ya explica los atributos reales (ej: "Selecciona sabor y peso").
+
+**Tipos afectados:** GENERAL, ROPA, SUPLEMENTOS, ELECTRONICA, FARMACIA, FERRETERIA
+
+---
+
+### Feat: Plan management modal en superadmin users
+
+**Cambios en** `app/(dashboard)/superadmin/users/page.tsx`:
+- Columna "Plan" en tabla de usuarios con badges de color por plan
+- Botón "Administrar Plan" (icono CreditCard) por usuario con organización
+- Modal completo con:
+  - Selector de plan (BASICO, CRECER, PRO, EMPRESARIAL)
+  - Date picker para vencimiento
+  - Botones rápidos: +30 días, +90 días, +1 año
+  - PATCH a `/api/superadmin/organizations/[id]` para guardar
+
+---
+
+### Deploy exitoso
+
+**Commit:** `904d371` — feat: variant labels unified + plan management modal in superadmin users
+**Producción:** https://gesti-os.vercel.app
+**Build:** Next.js 16.2.3, 74 páginas, TypeScript OK, 37s
+
+---
+
 ## 2026-05-08
 
 ### Fix: Supabase env vars missing — error message mejorado
