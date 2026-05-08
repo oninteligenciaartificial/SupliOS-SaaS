@@ -1,5 +1,30 @@
 ---
 
+## 2026-05-07 (sesión noche)
+
+### Fix: `profiles.createdAt` y `profiles.updatedAt` — removidos del schema (columnas no existen en DB)
+
+**Error:**
+```
+PrismaClientKnownRequestError: The column `profiles.updatedAt` does not exist in the current database.
+PrismaClientKnownRequestError: The column `profiles.createdAt` does not exist in the current database.
+```
+
+**Causa:** Mismo problema que `profiles.email` — el schema Prisma tenía columnas de timestamp que nunca se migraron a Supabase.
+
+**Fix:** Removidos `createdAt` y `updatedAt` del modelo `Profile`. Cambiados todos los `orderBy: { createdAt: ... }` a `orderBy: { id: ... }` en staff, team, y superadmin routes.
+
+**Archivos modificados:**
+- `prisma/schema.prisma` — removidos `createdAt`, `updatedAt` de Profile
+- `app/api/staff/route.ts` — removidos createdAt/updatedAt de select, orderBy id
+- `app/api/staff/[id]/route.ts` — removido updatedAt del select
+- `app/api/superadmin/users/route.ts` — orderBy id en lugar de createdAt
+- `app/api/team/route.ts` — orderBy id en lugar de createdAt
+
+**Nota:** El deploy a Vercel está en cola — hay 7 deployments pendientes por congestión de infraestructura. Los cambios están commiteados y pusheados a GitHub.
+
+---
+
 ## 2026-05-07 (sesión tarde)
 
 ### Fix 1: `profiles.email` — removido del schema (columna no existe en DB)

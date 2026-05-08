@@ -17,6 +17,15 @@ This version has breaking changes — APIs, conventions, and file structure may 
 
 **Si no podés aplicar la migración:** NO agregues el campo al schema. Usá `user.email` de Supabase Auth u otra fuente existente.
 
+### Modelo Profile — campos que NO existen en la DB
+
+El modelo `Profile` en `prisma/schema.prisma` NO tiene estas columnas en la DB real de Supabase:
+- `email` — removido (usar `user.email` de Supabase Auth)
+- `createdAt` — removido (usar `id` para ordering)
+- `updatedAt` — removido
+
+**NO agregues estos campos de vuelta al schema** a menos que primero apliques la migración manualmente a Supabase.
+
 ### Lazy Prisma initialization
 
 `lib/prisma.ts` usa un `Proxy` para lazy initialization. NO cambies esto a instanciación directa — el build estático de Next.js fallaría sin `DATABASE_URL`.
