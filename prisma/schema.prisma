@@ -95,6 +95,7 @@ model Organization {
   paymentRequests PaymentRequest[]
   invoices        Invoice[]
   qrPayments      QrPayment[]
+  cashRegisters   CashRegister[]
 
   @@map("organizations")
 }
@@ -114,6 +115,7 @@ model Profile {
   organization Organization? @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   branch       Branch?       @relation(fields: [branchId], references: [id], onDelete: SetNull)
   orders       Order[]       @relation("StaffOrders")
+  cashRegisters CashRegister[]
 
   @@map("profiles")
 }
@@ -132,8 +134,9 @@ model Branch {
   createdAt      DateTime @default(now())
 
   organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  profiles     Profile[]
-  orders       Order[]
+  profiles      Profile[]
+  orders        Order[]
+  cashRegisters CashRegister[]
 
   @@map("branches")
 }
@@ -505,4 +508,27 @@ model QrPayment {
   @@index([orderId, status])
   @@index([status, expiresAt])
   @@map("qr_payments")
+}
+
+model CashRegister {
+  id                   String       @id @default(cuid())
+  organizationId       String
+  staffId              String?
+  branchId             String?
+  date                 DateTime     @db.Date
+  totalEfectivo        Decimal      @default(0) @db.Decimal(10, 2)
+  totalTarjeta         Decimal      @default(0) @db.Decimal(10, 2)
+  totalTransferencia   Decimal      @default(0) @db.Decimal(10, 2)
+  totalQr              Decimal      @default(0) @db.Decimal(10, 2)
+  montoRealEfectivo    Decimal?     @db.Decimal(10, 2)
+  diferencia           Decimal?     @db.Decimal(10, 2)
+  notas                String?
+  createdAt            DateTime     @default(now())
+
+  organization         Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  staff                Profile?     @relation(fields: [staffId], references: [id], onDelete: SetNull)
+  branch               Branch?      @relation(fields: [branchId], references: [id], onDelete: SetNull)
+
+  @@index([organizationId, date(sort: Desc)])
+  @@map("cash_registers")
 }
