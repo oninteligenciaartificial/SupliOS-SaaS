@@ -101,6 +101,7 @@ export default async function DashboardLayout({
   const tenantLinks = [
     { href: "/dashboard", label: "Dashboard" },
     { href: "/pos", label: "Punto de Venta" },
+    { href: "/ventas", label: "Ventas" },
     { href: "/inventory", label: ui.sidebarLabels.inventory },
     { href: "/orders", label: "Pedidos" },
     { href: "/customers", label: "Clientes" },

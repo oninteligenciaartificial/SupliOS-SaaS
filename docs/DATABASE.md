@@ -199,7 +199,8 @@ Organization
   ├── ActivityLog[]
   ├── AuditLog[]
   ├── PaymentRequest[]
-  └── WaConversation[]
+  ├── WaConversation[]
+  └── CashRegister[]
 ```
 
 ## Migraciones
@@ -212,3 +213,27 @@ Agrega:
 - `products.hasVariants`, `products.attributeSchema`
 - Tabla `product_variants` completa
 - `order_items.variantId`, `order_items.variantSnapshot`
+
+### `20260509120000_create_cash_registers`
+Agrega:
+- Tabla `cash_registers` — cierre diario de caja por organización/sucursal
+- Índices únicos parciales para garantizar un corte por día (con y sin `branchId`)
+- **Aplicado directamente a Supabase el 2026-05-09** (no via `migrate deploy`)
+
+### CashRegister (`cash_registers`)
+
+| Campo | Tipo | Notas |
+|---|---|---|
+| organizationId | String | FK → Organization (cascade) |
+| staffId | String? | FK → Profile (SetNull) |
+| branchId | String? | FK → Branch (SetNull) |
+| date | Date | día del corte |
+| totalEfectivo | Decimal(10,2) | total sistema efectivo |
+| totalTarjeta | Decimal(10,2) | total sistema tarjeta |
+| totalTransferencia | Decimal(10,2) | total sistema transferencia |
+| totalQr | Decimal(10,2) | total sistema QR |
+| montoRealEfectivo | Decimal(10,2)? | conteo físico del cajero |
+| diferencia | Decimal(10,2)? | montoReal − totalEfectivo |
+| notas | String? | observaciones del cierre |
+
+Restricción: un solo corte por `(organizationId, date)` sin sucursal, o por `(organizationId, date, branchId)` con sucursal.

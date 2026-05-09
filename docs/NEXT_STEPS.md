@@ -16,14 +16,16 @@ Ver análisis detallado en `docs/ANALYSIS.md`. Ver plan de trabajo en `docs/PLAN
 | Auth (Supabase) + multi-tenancy | ✅ Completo |
 | Dashboard (KPIs, stock alerts) | ✅ Completo |
 | POS + selector de variantes + carrito + loyalty canje | ✅ Completo |
+| Ventas — lista `/ventas`, detalle `/ventas/[id]`, recibo `/print/recibo/[id]` | ✅ Completo (2026-05-09) |
 | Inventario + variantes por tipo de negocio | ✅ Completo |
 | Pedidos (CRUD, estados, email automático, transacciones atómicas) | ✅ Completo |
 | Clientes (CRM, búsqueda, loyaltyPoints acumulación) | ✅ Completo |
 | Categorías / Proveedores / Descuentos / Sucursales | ✅ Completo |
 | Reportes (ingresos, margen, top productos, caja) + exportación CSV | ✅ Completo |
+| Corte de caja — desglose por método + cierre efectivo con diferencia | ✅ Completo (2026-05-09) |
 | Configuración (org, tipo de negocio, moneda) | ✅ Completo |
 | Facturación (plan, add-ons read-only) | ✅ Completo |
-| Equipo (staff management) | ✅ Completo |
+| Equipo / Staff management (`/api/team`) | ✅ Completo |
 | Sistema de emails (12 tipos via Brevo) | ✅ Completo |
 | Cron jobs (cumpleaños, vencimiento, inactivos, plan) | ✅ Completo |
 | Solicitudes de pago QR + aprobación superadmin | ✅ Completo |
@@ -33,6 +35,8 @@ Ver análisis detallado en `docs/ANALYSIS.md`. Ver plan de trabajo en `docs/PLAN
 | `lib/audit.ts` + UI `/audit` + `logAudit()` en orders | ✅ Implementado |
 | Rate limiting en `/api/registro` | ✅ Implementado |
 | Error monitoring (`reportAsyncError`) | ✅ Fase 1 |
+| Middleware de auth + protección de rutas | ✅ Completo (2026-05-09) |
+| Páginas globales error.tsx / loading.tsx / not-found.tsx | ✅ Completo (2026-05-09) |
 
 ---
 
