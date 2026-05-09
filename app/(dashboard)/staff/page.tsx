@@ -9,19 +9,18 @@ import DeleteConfirmModal from "./components/DeleteConfirmModal";
 interface StaffMember {
   id: string;
   userId: string;
-  email: string;
   name: string;
-  role: "MANAGER" | "STAFF" | "VIEWER";
+  role: "ADMIN" | "STAFF";
   branchId: string | null;
-  branch?: { id: string; name: string } | null;
   createdAt: string;
-  updatedAt?: string;
 }
 
 interface ApiResponse {
   data: StaffMember[];
   meta: { total: number; page: number; limit: number; pages: number };
 }
+
+type StaffMemberFromApi = StaffMember;
 
 export default function StaffPage() {
   const [staff, setStaff] = useState<StaffMember[]>([]);
@@ -39,15 +38,15 @@ export default function StaffPage() {
     setLoading(true);
     setError(null);
     try {
-      const res = await fetch(`/api/staff?page=${p}&limit=${limit}`);
+      const res = await fetch(`/api/team`);
       if (!res.ok) {
         const err = await res.json();
-        throw new Error(err.error || "Error al cargar staff");
+        throw new Error(err.error || "Error al cargar equipo");
       }
-      const data: ApiResponse = await res.json();
-      setStaff(data.data);
-      setTotal(data.meta.total);
-      setPage(data.meta.page);
+      const data: StaffMember[] = await res.json();
+      setStaff(data);
+      setTotal(data.length);
+      setPage(1);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Error desconocido");
     } finally {
@@ -61,19 +60,19 @@ export default function StaffPage() {
 
   const handleAddStaff = async (data: { email: string; name: string; role: string; branchId?: string }) => {
     try {
-      const res = await fetch("/api/staff", {
+      const res = await fetch("/api/team", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(data),
+        body: JSON.stringify({ ...data, password: `temp_${Date.now()}` }),
       });
 
       if (!res.ok) {
         const err = await res.json();
-        throw new Error(err.error || "Error al crear staff");
+        throw new Error(err.error || "Error al crear miembro");
       }
 
       setShowAddModal(false);
-      fetchStaff(page);
+      fetchStaff(1);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Error desconocido");
     }
@@ -81,7 +80,7 @@ export default function StaffPage() {
 
   const handleUpdateStaff = async (id: string, data: { role?: string; branchId?: string | null }) => {
     try {
-      const res = await fetch(`/api/staff/${id}`, {
+      const res = await fetch(`/api/team/${id}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(data),
@@ -89,10 +88,10 @@ export default function StaffPage() {
 
       if (!res.ok) {
         const err = await res.json();
-        throw new Error(err.error || "Error al actualizar staff");
+        throw new Error(err.error || "Error al actualizar miembro");
       }
 
-      fetchStaff(page);
+      fetchStaff(1);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Error desconocido");
     }
@@ -101,18 +100,18 @@ export default function StaffPage() {
   const handleDeleteStaff = async () => {
     if (!selectedStaff) return;
     try {
-      const res = await fetch(`/api/staff/${selectedStaff.id}`, {
+      const res = await fetch(`/api/team/${selectedStaff.id}`, {
         method: "DELETE",
       });
 
       if (!res.ok) {
         const err = await res.json();
-        throw new Error(err.error || "Error al eliminar staff");
+        throw new Error(err.error || "Error al eliminar miembro");
       }
 
       setShowDeleteModal(false);
       setSelectedStaff(null);
-      fetchStaff(page);
+      fetchStaff(1);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Error desconocido");
     }

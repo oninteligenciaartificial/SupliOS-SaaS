@@ -2,10 +2,14 @@ import { NextResponse } from "next/server";
 import { getTenantProfile } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { canUseAddon } from "@/lib/plans";
+import { checkOrgRateLimit, RATE_LIMITS } from "@/lib/rate-limit";
 
 export async function GET(request: Request) {
   const profile = await getTenantProfile();
   if (!profile) return NextResponse.json({ error: "No autorizado" }, { status: 401 });
+
+  const rateLimited = checkOrgRateLimit(profile.organizationId, "reports-export", RATE_LIMITS.export);
+  if (rateLimited) return rateLimited;
 
   const activeAddons = await prisma.orgAddon.findMany({
     where: { organizationId: profile.organizationId, active: true },
@@ -18,10 +22,21 @@ export async function GET(request: Request) {
   }
 
   const { searchParams } = new URL(request.url);
-  const from = searchParams.get("from")
-    ? new Date(searchParams.get("from")!)
-    : new Date(new Date().getFullYear(), new Date().getMonth(), 1);
-  const to = searchParams.get("to") ? new Date(searchParams.get("to")!) : new Date();
+  const fromParam = searchParams.get("from");
+  const toParam = searchParams.get("to");
+
+  const from = fromParam ? new Date(fromParam) : new Date(new Date().getFullYear(), new Date().getMonth(), 1);
+  const to = toParam ? new Date(toParam) : new Date();
+
+  // Validate date range: max 1 year export
+  const maxRangeMs = 365 * 24 * 60 * 60 * 1000;
+  if (to.getTime() - from.getTime() > maxRangeMs) {
+    return NextResponse.json({ error: "El rango máximo de exportación es 1 año" }, { status: 400 });
+  }
+  if (isNaN(from.getTime()) || isNaN(to.getTime())) {
+    return NextResponse.json({ error: "Fechas invalidas" }, { status: 400 });
+  }
+
   const toEnd = new Date(to);
   toEnd.setHours(23, 59, 59, 999);
 

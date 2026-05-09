@@ -1,18 +1,17 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { prisma } from "@/lib/prisma";
-import { checkRateLimit } from "@/lib/rate-limit";
+import { checkRateLimit, RATE_LIMITS } from "@/lib/rate-limit";
 import { z } from "zod";
 
 const schema = z.object({
-  organizationName: z.string().min(1),
-  userName: z.string().min(1),
+  organizationName: z.string().min(1).max(100),
+  userName: z.string().min(1).max(100),
   businessType: z.enum(["GENERAL", "ROPA", "SUPLEMENTOS", "ELECTRONICA", "FARMACIA", "FERRETERIA"]).optional(),
 });
 
 export async function POST(request: Request) {
-  // Rate limit: 10 requests per minute per IP
-  const rateLimited = checkRateLimit(request, "setup", { windowMs: 60_000, max: 10 });
+  const rateLimited = checkRateLimit(request, "setup", RATE_LIMITS.setup);
   if (rateLimited) return rateLimited;
 
   const supabase = await createClient();

@@ -5,10 +5,10 @@ import { Trash2 } from "lucide-react";
 
 interface StaffMember {
   id: string;
-  email: string;
+  userId: string;
   name: string;
-  role: "MANAGER" | "STAFF" | "VIEWER";
-  branch?: { id: string; name: string } | null;
+  role: "ADMIN" | "STAFF";
+  branchId: string | null;
   createdAt: string;
 }
 
@@ -20,10 +20,9 @@ interface Props {
   onUpdateRole: (id: string, data: { role?: string }) => void;
 }
 
-const roleLabels = {
-  MANAGER: "Gerente",
+const roleLabels: Record<string, string> = {
+  ADMIN: "Administrador",
   STAFF: "Personal",
-  VIEWER: "Visor",
 };
 
 export default function StaffTable({ staff, loading, onEdit, onDelete, onUpdateRole }: Props) {
@@ -47,9 +46,7 @@ export default function StaffTable({ staff, loading, onEdit, onDelete, onUpdateR
         <thead className="bg-slate-50">
           <tr>
             <th className="px-6 py-3 text-left text-sm font-semibold">Nombre</th>
-            <th className="px-6 py-3 text-left text-sm font-semibold">Email</th>
             <th className="px-6 py-3 text-left text-sm font-semibold">Rol</th>
-            <th className="px-6 py-3 text-left text-sm font-semibold">Sucursal</th>
             <th className="px-6 py-3 text-left text-sm font-semibold">Acciones</th>
           </tr>
         </thead>
@@ -57,7 +54,6 @@ export default function StaffTable({ staff, loading, onEdit, onDelete, onUpdateR
           {staff.map((member) => (
             <tr key={member.id} className="hover:bg-slate-50">
               <td className="px-6 py-4 font-medium">{member.name}</td>
-              <td className="px-6 py-4 text-sm text-muted-foreground">{member.email}</td>
               <td className="px-6 py-4">
                 <select
                   value={member.role}
@@ -69,13 +65,9 @@ export default function StaffTable({ staff, loading, onEdit, onDelete, onUpdateR
                   className="text-sm px-2 py-1 rounded border"
                   disabled={updatingId === member.id}
                 >
-                  <option value="VIEWER">Visor</option>
                   <option value="STAFF">Personal</option>
-                  <option value="MANAGER">Gerente</option>
+                  <option value="ADMIN">Administrador</option>
                 </select>
-              </td>
-              <td className="px-6 py-4 text-sm">
-                {member.branch?.name || "—"}
               </td>
               <td className="px-6 py-4">
                 <button

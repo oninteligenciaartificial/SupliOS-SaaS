@@ -2,13 +2,17 @@ import { NextResponse } from "next/server";
 import { getTenantProfile } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { canUseFeature, planGateError } from "@/lib/plans";
+import { checkOrgRateLimit, RATE_LIMITS } from "@/lib/rate-limit";
 
-export async function GET() {
+export async function GET(request: Request) {
   const profile = await getTenantProfile();
   if (!profile) return NextResponse.json({ error: "No autorizado" }, { status: 401 });
   if (!canUseFeature(profile.plan, "csv_export")) {
     return NextResponse.json(planGateError("csv_export"), { status: 403 });
   }
+
+  const rateLimited = checkOrgRateLimit(profile.organizationId, "products-export", RATE_LIMITS.export);
+  if (rateLimited) return rateLimited;
 
   const products = await prisma.product.findMany({
     where: { organizationId: profile.organizationId, active: true },

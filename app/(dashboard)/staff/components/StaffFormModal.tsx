@@ -5,7 +5,6 @@ import { X } from "lucide-react";
 
 interface StaffMember {
   id: string;
-  email: string;
   name: string;
   role: string;
   branchId?: string | null;
@@ -26,7 +25,6 @@ export default function StaffFormModal({ staff, onSave, onClose }: Props) {
 
   useEffect(() => {
     if (staff) {
-      setEmail(staff.email);
       setName(staff.name);
       setRole(staff.role);
     }
@@ -98,9 +96,8 @@ export default function StaffFormModal({ staff, onSave, onClose }: Props) {
               onChange={(e) => setRole(e.target.value)}
               className="w-full px-3 py-2 border rounded text-sm"
             >
-              <option value="VIEWER">Visor</option>
               <option value="STAFF">Personal</option>
-              <option value="MANAGER">Gerente</option>
+              <option value="ADMIN">Administrador</option>
             </select>
           </div>
 

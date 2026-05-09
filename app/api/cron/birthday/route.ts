@@ -3,9 +3,26 @@ import { prisma } from "@/lib/prisma";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { sendBirthdayEmail, sendPlainNotification } from "@/lib/email";
 import { reportAsyncError } from "@/lib/monitoring";
+import { checkRateLimit, RATE_LIMITS } from "@/lib/rate-limit";
+
+function verifyCronSecret(provided: string | null): boolean {
+  const secret = process.env.CRON_SECRET;
+  if (!secret || !provided) return false;
+  if (secret.length !== provided.length) return false;
+  let diff = 0;
+  for (let i = 0; i < secret.length; i++) {
+    diff |= secret.charCodeAt(i) ^ provided.charCodeAt(i);
+  }
+  return diff === 0;
+}
 
 export async function GET(request: Request) {
-  if (request.headers.get("Authorization") !== `Bearer ${process.env.CRON_SECRET}`) {
+  const rateLimited = checkRateLimit(request, "cron-birthday", RATE_LIMITS.cron);
+  if (rateLimited) return rateLimited;
+
+  const authHeader = request.headers.get("Authorization");
+  const token = authHeader?.startsWith("Bearer ") ? authHeader.slice(7) : null;
+  if (!verifyCronSecret(token)) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
@@ -13,7 +30,6 @@ export async function GET(request: Request) {
   const month = today.getMonth() + 1;
   const day = today.getDate();
 
-  // Find customers whose birthday month+day matches today — only EMPRESARIAL orgs
   const customers = await prisma.customer.findMany({
     where: { email: { not: null }, birthday: { not: null }, organization: { plan: "EMPRESARIAL" } },
     include: { organization: { select: { id: true, name: true, slug: true } } },
@@ -33,7 +49,6 @@ export async function GET(request: Request) {
     const code = `CUMPLE${customer.name.split(" ")[0].toUpperCase()}${day}${month}`;
     const discountValue = 10;
 
-    // Create discount for this org (upsert to avoid duplicates)
     await prisma.discount.upsert({
       where: { organizationId_code: { organizationId: customer.organizationId, code } },
       update: { active: true, expiresAt: new Date(today.getFullYear(), today.getMonth(), today.getDate() + 1) },
@@ -65,7 +80,6 @@ export async function GET(request: Request) {
     sent++;
   }
 
-  // Also notify admins of each org that had birthday customers
   const orgIds = [...new Set(birthdayCustomers.map(c => c.organizationId))];
   for (const orgId of orgIds) {
     const adminProfiles = await prisma.profile.findMany({

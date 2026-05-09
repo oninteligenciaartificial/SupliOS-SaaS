@@ -3,13 +3,14 @@ import { getTenantProfile } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { PLAN_LIMITS, limitGateError } from "@/lib/plans";
 import { hasPermission } from "@/lib/permissions";
+import { checkOrgRateLimit, RATE_LIMITS } from "@/lib/rate-limit";
 import { z } from "zod";
 
 const schema = z.object({
-  code: z.string().min(1).toUpperCase(),
-  description: z.string().optional(),
+  code: z.string().min(1).max(50).toUpperCase(),
+  description: z.string().max(500).optional(),
   type: z.enum(["PORCENTAJE", "MONTO_FIJO"]),
-  value: z.number().min(0),
+  value: z.number().min(0).max(100),
   expiresAt: z.string().datetime().optional(),
 });
 
@@ -29,6 +30,9 @@ export async function POST(request: Request) {
   const profile = await getTenantProfile();
   if (!profile) return NextResponse.json({ error: "No autorizado" }, { status: 401 });
   if (!hasPermission(profile.role, "discounts:create")) return NextResponse.json({ error: "Sin permiso" }, { status: 403 });
+
+  const rateLimited = checkOrgRateLimit(profile.organizationId, "discounts", RATE_LIMITS.write);
+  if (rateLimited) return rateLimited;
 
   let body: unknown;
   try { body = await request.json(); }

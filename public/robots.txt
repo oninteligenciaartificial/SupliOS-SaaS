@@ -1,0 +1,22 @@
+User-agent: *
+Allow: /
+Disallow: /dashboard/
+Disallow: /pos/
+Disallow: /inventory/
+Disallow: /orders/
+Disallow: /customers/
+Disallow: /reports/
+Disallow: /caja/
+Disallow: /suppliers/
+Disallow: /discounts/
+Disallow: /categories/
+Disallow: /branches/
+Disallow: /conversations/
+Disallow: /staff/
+Disallow: /settings/
+Disallow: /superadmin/
+Disallow: /api/
+Disallow: /setup
+Disallow: /plan-vencido
+
+Sitemap: https://gesti-os.vercel.app/sitemap.xml

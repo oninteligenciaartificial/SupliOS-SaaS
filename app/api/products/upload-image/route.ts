@@ -2,9 +2,11 @@ import { NextResponse } from "next/server";
 import { getTenantProfile } from "@/lib/auth";
 import { hasPermission } from "@/lib/permissions";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { checkOrgRateLimit, RATE_LIMITS } from "@/lib/rate-limit";
+import { randomBytes } from "crypto";
 
 const BUCKET = "product-images";
-const MAX_BYTES = 5 * 1024 * 1024; // 5 MB
+const MAX_BYTES = 5 * 1024 * 1024;
 
 const MAGIC_BYTES: Record<string, { bytes: number[]; mime: string; offset: number }[]> = {
   "image/jpeg": [{ bytes: [0xFF, 0xD8, 0xFF], mime: "image/jpeg", offset: 0 }],
@@ -20,6 +22,18 @@ const MAGIC_BYTES: Record<string, { bytes: number[]; mime: string; offset: numbe
 };
 
 const ALLOWED_MIMES = ["image/jpeg", "image/png", "image/webp", "image/gif"];
+const MIME_TO_EXT: Record<string, string> = {
+  "image/jpeg": "jpg",
+  "image/png": "png",
+  "image/gif": "gif",
+  "image/webp": "webp",
+};
+
+function generateSafeFilename(mime: string): string {
+  const ext = MIME_TO_EXT[mime] ?? "jpg";
+  const random = randomBytes(16).toString("hex");
+  return `${random}.${ext}`;
+}
 
 async function detectMimeFromBuffer(buffer: ArrayBuffer): Promise<string | null> {
   const bytes = new Uint8Array(buffer);
@@ -43,6 +57,9 @@ export async function POST(request: Request) {
   if (!hasPermission(profile.role, "products:edit"))
     return NextResponse.json({ error: "Sin permiso" }, { status: 403 });
 
+  const rateLimited = checkOrgRateLimit(profile.organizationId, "upload-image", RATE_LIMITS.upload);
+  if (rateLimited) return rateLimited;
+
   let formData: FormData;
   try {
     formData = await request.formData();
@@ -60,8 +77,8 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Tipo no permitido (JPG, PNG, WebP, GIF)" }, { status: 400 });
   }
 
-  const ext = file.name.split(".").pop() ?? "jpg";
-  const path = `${profile.organizationId}/${Date.now()}.${ext}`;
+  const safeFilename = generateSafeFilename(realMime);
+  const path = `${profile.organizationId}/${safeFilename}`;
 
   const supabase = createAdminClient();
   const { error } = await supabase.storage.from(BUCKET).upload(path, file, {

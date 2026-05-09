@@ -18,7 +18,6 @@ type Bucket = {
 
 const buckets = new Map<string, Bucket>();
 
-// Cleanup expired buckets every 60 seconds to prevent memory leaks
 const CLEANUP_INTERVAL_MS = 60_000;
 let lastCleanup = Date.now();
 
@@ -84,9 +83,6 @@ export function consumeRateLimit(
   };
 }
 
-/**
- * Rate limit response headers
- */
 function rateLimitHeaders(result: RateLimitResult, max: number): Record<string, string> {
   return {
     "Retry-After": String(Math.ceil((result.resetAt - Date.now()) / 1000)),
@@ -96,9 +92,6 @@ function rateLimitHeaders(result: RateLimitResult, max: number): Record<string, 
   };
 }
 
-/**
- * Create a rate-limited 429 response
- */
 export function rateLimitResponse(result: RateLimitResult, max: number): NextResponse {
   return NextResponse.json(
     { error: "Demasiadas solicitudes. Intenta nuevamente en unos minutos." },
@@ -106,19 +99,6 @@ export function rateLimitResponse(result: RateLimitResult, max: number): NextRes
   );
 }
 
-/**
- * Helper to apply rate limiting to a route handler.
- * Returns null if allowed, or a 429 response if rate limited.
- *
- * Usage:
- * ```typescript
- * export async function POST(request: Request) {
- *   const rateLimited = checkRateLimit(request, "route-key", { windowMs: 60000, max: 10 });
- *   if (rateLimited) return rateLimited;
- *   // ... handler logic
- * }
- * ```
- */
 export function checkRateLimit(
   request: Request,
   keyPrefix: string,
@@ -134,22 +114,6 @@ export function checkRateLimit(
   return null;
 }
 
-/**
- * Apply rate limiting using organization ID as key (for authenticated endpoints).
- * Returns null if allowed, or a 429 response if rate limited.
- *
- * Usage:
- * ```typescript
- * export async function POST(request: Request) {
- *   const profile = await getTenantProfile();
- *   if (!profile) return NextResponse.json({ error: "No autorizado" }, { status: 401 });
- *
- *   const rateLimited = checkOrgRateLimit(profile.organizationId, "route-key", { windowMs: 60000, max: 10 });
- *   if (rateLimited) return rateLimited;
- *   // ... handler logic
- * }
- * ```
- */
 export function checkOrgRateLimit(
   orgId: string,
   keyPrefix: string,
@@ -164,3 +128,18 @@ export function checkOrgRateLimit(
   return null;
 }
 
+/**
+ * Predefined rate limit configurations per endpoint type.
+ * Use these constants for consistent rate limiting across the app.
+ */
+export const RATE_LIMITS = {
+  auth: { windowMs: 15 * 60 * 1000, max: 5 },
+  setup: { windowMs: 60 * 1000, max: 3 },
+  import: { windowMs: 60 * 1000, max: 3 },
+  export: { windowMs: 60 * 60 * 1000, max: 10 },
+  upload: { windowMs: 60 * 1000, max: 10 },
+  write: { windowMs: 60 * 1000, max: 30 },
+  read: { windowMs: 60 * 1000, max: 100 },
+  superadmin: { windowMs: 60 * 1000, max: 20 },
+  cron: { windowMs: 60 * 1000, max: 2 },
+} as const;

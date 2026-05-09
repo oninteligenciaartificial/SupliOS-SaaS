@@ -9,10 +9,10 @@ export const PLAN_PRICES_BOB: Record<PlanType, number> = {
 export type AddonType = "WHATSAPP" | "FACTURACION" | "QR_BOLIVIA" | "ECOMMERCE" | "CONTABILIDAD";
 
 export const PLAN_META: Record<PlanType, { label: string; price: string; color: string; bg: string }> = {
-  BASICO:      { label: "Básico",      price: "$39/mes",  color: "text-brand-muted",          bg: "bg-white/5" },
-  CRECER:      { label: "Crecer",      price: "$59/mes",  color: "text-blue-300",              bg: "bg-blue-400/10" },
-  PRO:         { label: "Pro",         price: "$89/mes",  color: "text-blue-400",              bg: "bg-blue-500/10" },
-  EMPRESARIAL: { label: "Empresarial", price: "$139/mes", color: "text-brand-kinetic-orange",  bg: "bg-brand-kinetic-orange/10" },
+  BASICO:      { label: "Básico",      price: "$50/mes",  color: "text-brand-muted",          bg: "bg-white/5" },
+  CRECER:      { label: "Crecer",      price: "$76/mes",  color: "text-blue-300",              bg: "bg-blue-400/10" },
+  PRO:         { label: "Pro",         price: "$114/mes", color: "text-blue-400",              bg: "bg-blue-500/10" },
+  EMPRESARIAL: { label: "Empresarial", price: "$179/mes", color: "text-brand-kinetic-orange",  bg: "bg-brand-kinetic-orange/10" },
 };
 
 export const PLAN_LIMITS: Record<PlanType, { maxProducts: number; maxCustomers: number; maxStaff: number; maxDiscounts: number }> = {
@@ -42,6 +42,7 @@ export const FEATURE_PLAN: Record<string, PlanType> = {
   suppliers:        "CRECER",
   csv_import:       "CRECER",
   csv_export:       "CRECER",
+  stock_alert:      "CRECER",
   registro_publico: "PRO",
   tienda_online:    "PRO",
   email_basic:      "PRO",
@@ -51,6 +52,7 @@ export const FEATURE_PLAN: Record<string, PlanType> = {
   audit_log:        "EMPRESARIAL",
   facturacion_siat: "EMPRESARIAL",
   pagos_qr:         "PRO",
+  staff:            "BASICO",
 };
 
 export function canUseFeature(plan: PlanType, feature: string): boolean {

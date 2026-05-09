@@ -71,7 +71,7 @@ Siempre `.catch(() => {})` en envíos de email. Nunca bloquear la respuesta.
 - **1 cuenta = 1 organización.** `Profile.userId` es `@unique`. No hay switching entre orgs.
 - `getTenantProfile()` en `lib/auth.ts` es la fuente de verdad para auth en API routes. Devuelve `{ organizationId, plan, businessType, role }`.
 - Superadmin impersonation usa cookies (`impersonate_org_id`) — solo para rol SUPERADMIN.
-- Staff se crea con `temp_${Date.now()}` como userId placeholder (`app/api/staff/route.ts:104`). NO hay integración con Supabase Auth para invites.
+- Staff se gestiona con `/api/team` — crea usuarios reales en Supabase Auth con email+password. NO hay placeholder `temp_` userIds.
 
 ## Plan system
 
@@ -108,5 +108,4 @@ El sidebar en `app/(dashboard)/layout.tsx` usa `getBusinessUI(businessType)` par
 
 ## Known TODOs
 
-- `app/api/staff/route.ts:102` — Staff creado con placeholder userId, sin Supabase Auth invite
 - SIAT Bolivia, QR Bolivia, WhatsApp — requieren credenciales externas no configuradas
