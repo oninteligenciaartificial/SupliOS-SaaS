@@ -130,11 +130,32 @@ export default function ReportsPage() {
               <Download size={15} /> Resumen CSV
             </button>
             <a
-              href={`/api/reports/export?from=${from}&to=${to}`}
+              href={`/api/reports/export?from=${from}&to=${to}&type=ventas`}
               download
               className="flex items-center gap-2 px-4 py-2.5 rounded-full border border-white/10 text-brand-muted hover:text-white hover:bg-white/5 transition-colors text-sm font-medium"
             >
-              <Download size={15} /> Contabilidad CSV
+              <Download size={15} /> Ventas CSV
+            </a>
+            <a
+              href={`/api/reports/export?from=${from}&to=${to}&type=resumen`}
+              download
+              className="flex items-center gap-2 px-4 py-2.5 rounded-full border border-white/10 text-brand-muted hover:text-white hover:bg-white/5 transition-colors text-sm font-medium"
+            >
+              <Download size={15} /> Resumen Financiero
+            </a>
+            <a
+              href={`/api/reports/export?from=${from}&to=${to}&type=clientes`}
+              download
+              className="flex items-center gap-2 px-4 py-2.5 rounded-full border border-white/10 text-brand-muted hover:text-white hover:bg-white/5 transition-colors text-sm font-medium hidden lg:flex"
+            >
+              <Download size={15} /> Clientes CSV
+            </a>
+            <a
+              href={`/api/reports/export?type=inventario`}
+              download
+              className="flex items-center gap-2 px-4 py-2.5 rounded-full border border-white/10 text-brand-muted hover:text-white hover:bg-white/5 transition-colors text-sm font-medium hidden lg:flex"
+            >
+              <Download size={15} /> Inventario CSV
             </a>
           </div>
         )}

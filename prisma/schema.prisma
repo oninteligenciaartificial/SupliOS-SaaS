@@ -225,6 +225,7 @@ model Product {
   supplier     Supplier?       @relation(fields: [supplierId], references: [id], onDelete: SetNull)
   orderItems   OrderItem[]
   variants     ProductVariant[]
+  purchaseOrderItems PurchaseOrderItem[]
 
   @@unique([organizationId, sku])
   @@map("products")
@@ -338,6 +339,7 @@ model Supplier {
 
   organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   products     Product[]
+  purchaseOrders PurchaseOrder[]
 
   @@map("suppliers")
 }
@@ -552,4 +554,53 @@ model EmailLog {
   @@index([status, createdAt])
   @@index([type, createdAt])
   @@map("email_logs")
+}
+
+// =============================================
+// PURCHASE ORDERS (ordenes de compra a proveedores)
+// =============================================
+
+enum PurchaseOrderStatus {
+  BORRADOR
+  ENVIADO
+  PARCIAL
+  RECIBIDO
+  CANCELADO
+}
+
+model PurchaseOrder {
+  id             String               @id @default(cuid())
+  organizationId String
+  supplierId     String
+  status         PurchaseOrderStatus  @default(BORRADOR)
+  expectedDate   DateTime?
+  notes          String?
+  total          Decimal              @default(0) @db.Decimal(10, 2)
+  createdAt      DateTime             @default(now())
+  updatedAt      DateTime             @updatedAt
+
+  organization Organization          @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  supplier     Supplier              @relation(fields: [supplierId], references: [id], onDelete: Restrict)
+  items        PurchaseOrderItem[]
+
+  @@index([organizationId, createdAt])
+  @@index([organizationId, status])
+  @@index([supplierId])
+  @@map("purchase_orders")
+}
+
+model PurchaseOrderItem {
+  id              String  @id @default(cuid())
+  purchaseOrderId String
+  productId       String
+  quantity        Int
+  unitCost        Decimal @db.Decimal(10, 2)
+  received        Int     @default(0)
+
+  purchaseOrder   PurchaseOrder @relation(fields: [purchaseOrderId], references: [id], onDelete: Cascade)
+  product         Product       @relation(fields: [productId], references: [id], onDelete: Restrict)
+
+  @@index([purchaseOrderId])
+  @@index([productId])
+  @@map("purchase_order_items")
 }

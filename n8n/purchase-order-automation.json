@@ -1,0 +1,207 @@
+{
+  "name": "GestiOS - Purchase Order Automation",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "hours",
+              "hoursInterval": 6
+            }
+          ]
+        }
+      },
+      "id": "schedule-trigger",
+      "name": "Schedule Trigger",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [240, 300]
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "={{ $env.GESTIOS_URL }}/api/purchase-orders?status=ENVIADO&limit=50",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "Bearer {{ $env.GESTIOS_API_KEY }}"
+            }
+          ]
+        },
+        "options": {
+          "timeout": 10000
+        }
+      },
+      "id": "fetch-pos",
+      "name": "Fetch Pending POs",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [350, 300]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Check for POs that are past expected date\nconst now = new Date();\nconst overduePOs = [];\n\nfor (const item of $input.all()) {\n  const po = item.json;\n  if (po.expectedDate) {\n    const expected = new Date(po.expectedDate);\n    if (expected < now) {\n      overduePOs.push({\n        json: {\n          id: po.id,\n          supplier: po.supplier.name,\n          total: po.total,\n          expectedDate: po.expectedDate,\n          daysOverdue: Math.floor((now - expected) / (1000 * 60 * 60 * 24)),\n          organizationId: po.organizationId\n        }\n      });\n    }\n  }\n}\n\nreturn overduePOs;"
+      },
+      "id": "check-overdue",
+      "name": "Check Overdue POs",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [460, 300]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "has-overdue",
+              "leftValue": "={{ $input.all().length }}",
+              "rightValue": "0",
+              "operator": {
+                "type": "number",
+                "operation": "gt",
+                "name": "filter.operator.gt"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "filter-overdue",
+      "name": "Has Overdue?",
+      "type": "n8n-nodes-base.filter",
+      "typeVersion": 2,
+      "position": [570, 300]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Format overdue POs into a single notification\nconst pos = $input.all().map(item => item.json);\n\nreturn [{\n  json: {\n    subject: `[GestiOS] ${pos.length} orden(es) de compra vencida(s)`,\n    body: pos.map(po => \n      `Orden ${po.id.slice(-8).toUpperCase()} - ${po.supplier} - Bs. ${po.total} (vencida hace ${po.daysOverdue} dia(s))`\n    ).join(\"\\n\"),\n    count: pos.length\n  }\n}];"
+      },
+      "id": "format-notification",
+      "name": "Format Notification",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [680, 300]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.GESTIOS_URL }}/api/notifications/purchase-order-overdue",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "Bearer {{ $env.GESTIOS_API_KEY }}"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"subject\": $json.subject,\n  \"body\": $json.body,\n  \"count\": $json.count\n}",
+        "options": {
+          "timeout": 10000
+        }
+      },
+      "id": "send-notification",
+      "name": "Send Alert to GestiOS",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [790, 300],
+      "onError": "continueRegularOutput"
+    }
+  ],
+  "connections": {
+    "Schedule Trigger": {
+      "main": [
+        [
+          {
+            "node": "Fetch Pending POs",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Fetch Pending POs": {
+      "main": [
+        [
+          {
+            "node": "Check Overdue POs",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Check Overdue POs": {
+      "main": [
+        [
+          {
+            "node": "Has Overdue?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Has Overdue?": {
+      "main": [
+        [
+          {
+            "node": "Format Notification",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format Notification": {
+      "main": [
+        [
+          {
+            "node": "Send Alert to GestiOS",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "pinData": {},
+  "settings": {
+    "executionOrder": "v1",
+    "saveManualExecutions": true,
+    "saveExecutionProgress": true
+  },
+  "staticData": null,
+  "tags": [
+    {
+      "name": "gestios",
+      "color": "blue"
+    },
+    {
+      "name": "purchase-orders",
+      "color": "orange"
+    },
+    {
+      "name": "automation",
+      "color": "green"
+    }
+  ],
+  "triggerCount": 1,
+  "updatedAt": "2026-05-13T15:00:00.000Z",
+  "versionId": "1"
+}

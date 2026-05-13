@@ -1,6 +1,6 @@
 # Análisis técnico completo — GestiOS
 
-Generado: 2026-04-29. Actualizado: 2026-05-11. Basado en lectura directa del código y ejecución de herramientas.
+Generado: 2026-04-29. Actualizado: 2026-05-13. Basado en lectura directa del código y ejecución de herramientas.
 
 ---
 
@@ -194,7 +194,7 @@ Estas rutas no usan `getTenantProfile` por diseño:
 | Rate limiting | ✅ Upstash Redis + in-memory fallback |
 | Transacciones atómicas en órdenes | ✅ |
 | Error monitoring | ✅ Sentry activo en producción |
-| Tests (Vitest) | ✅ 229 tests, 12 files |
+| Tests (Vitest) | ✅ 229 tests, 13 files |
 | RLS en Supabase | ✅ Habilitado en `public.profiles` |
 | Email logging | ✅ `EmailLog` table + webhook tracking |
 

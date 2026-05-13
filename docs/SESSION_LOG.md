@@ -1,5 +1,73 @@
 ---
 
+## 2026-05-13 — Deploy de todos los cambios pendientes
+
+### Deploy completo
+
+**Commit:** `8163631` — chore: deploy all pending changes
+**Producción:** https://gesti-os.vercel.app
+**Build:** Next.js 16.2.3, 83 páginas, TypeScript OK, 44s
+
+**Cambios desplegados (67 archivos, 3808 inserciones):**
+- Billing, POS, ventas, dashboard UI updates
+- API routes: conversations, cron, customers, discounts, orders, payments, products, registro, reports, setup, superadmin, team, tienda
+- Email system: Brevo webhook, email stats, email log migration
+- QR Bolivia: addons, manual QR modal
+- Sample data API y scripts
+- n8n workflows y plans
+- Actualización de documentación
+- Rate limit, WhatsApp, QR Bolivia lib updates
+- Tests: rate-limit, tienda-security, billing-qr, email
+
+---
+
+## 2026-05-13 — Deploy masivo + Landing/Pricing + Export Contable + Purchase Orders + n8n
+
+### Deploy completo
+- **Commit:** `8163631` — chore: deploy all pending changes
+- **67 archivos** cambiados, 3808 inserciones
+- **Producción:** https://gesti-os.vercel.app
+- **Build:** Next.js 16.2.3, 83 páginas, TypeScript OK, 44s
+
+### Feat: Landing page mejorada
+- Sección "Cómo funciona" (4 pasos)
+- Testimonios de clientes
+- FAQ (6 preguntas)
+- CTA final
+- Nav sticky con backdrop blur
+
+### Feat: Pricing page mejorada
+- Toggle mensual/anual (-10%)
+- CTA con plan pre-seleccionado (`/signup?plan=X`)
+- Tabla comparativa detallada (20 features × 4 planes)
+- Badges de ahorro anual
+
+### Feat: Signup con plan pre-seleccionado
+- Badge del plan seleccionado desde URL
+
+### Feat: Export contable mejorado
+- 4 tipos: ventas, resumen financiero, clientes, inventario
+- Gate: add-on CONTABILIDAD o plan CRECER+
+- UI en reportes con 5 botones de export
+
+### Feat: Purchase Orders completo
+- Schema: PurchaseOrder + PurchaseOrderItem
+- API: CRUD con status workflow (BORRADOR → ENVIADO → PARCIAL → RECIBIDO)
+- UI: Lista, creación, detalle, cambio de status
+- Al recibir → actualiza stock automáticamente
+- Migración: `20260513120000_add_purchase_orders`
+
+### Feat: n8n workflows mejorados
+- Brevo webhook: deduplicación, timeout, error handling
+- Brevo polling: filter by time, dedup, batch send
+- Purchase order automation: alertas de POs vencidas (cada 6h)
+
+### Docs actualizadas
+- NEXT_STEPS.md, ANALYSIS.md, PLAN.md, 00-PROJECT-CONTEXT.md, SESSION_LOG.md
+- Nuevo: CHANGELOG-2026-05.md
+
+---
+
 ## 2026-05-11 — RLS en profiles + Brevo email system + QR Bolivia addon
 
 ### Fix: RLS habilitado en public.profiles (Supabase lint 0013)

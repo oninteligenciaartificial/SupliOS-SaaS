@@ -1,7 +1,18 @@
 # Estado Técnico del Proyecto
 
-Análisis al 2026-05-11. Basado en lectura directa del código y ejecución de herramientas.
+Análisis al 2026-05-13. Basado en lectura directa del código y ejecución de herramientas.
 Ver análisis detallado en `docs/ANALYSIS.md`. Ver plan de trabajo en `docs/PLAN.md`.
+
+**Últimas actualizaciones (2026-05-13):**
+- ✅ Deploy de todos los cambios pendientes (67 archivos, 3808 inserciones)
+- ✅ Landing page mejorada: cómo funciona, testimonios, FAQ, CTA
+- ✅ Pricing page mejorada: toggle mensual/anual, tabla comparativa, plan pre-seleccionado
+- ✅ Export contable mejorado: 4 tipos (ventas, resumen, clientes, inventario)
+- ✅ Purchase Orders: schema + API + UI completa
+- ✅ n8n workflows mejorados: Brevo webhook/polling + PO automation
+- ✅ Producción: https://gesti-os.vercel.app
+- ✅ Tests: 229 pasando (13 archivos)
+- ✅ Build exitoso: Next.js 16.2.3, 83 páginas, TypeScript OK, 44s
 
 **Últimas actualizaciones (2026-05-11):**
 - ✅ Email system completo: Brevo con logging, rate limiting, dashboard métricas
@@ -42,6 +53,10 @@ Ver análisis detallado en `docs/ANALYSIS.md`. Ver plan de trabajo en `docs/PLAN
 | Error monitoring (`reportAsyncError`) | ✅ Fase 1 |
 | Middleware de auth + protección de rutas | ✅ Completo (2026-05-09) |
 | Páginas globales error.tsx / loading.tsx / not-found.tsx | ✅ Completo (2026-05-09) |
+| **Purchase Orders** — CRUD + status workflow + stock auto-update | ✅ Completo (2026-05-13) |
+| **Export contable** — 4 tipos (ventas, resumen, clientes, inventario) | ✅ Completo (2026-05-13) |
+| **Landing page** — cómo funciona, testimonios, FAQ | ✅ Completo (2026-05-13) |
+| **Pricing page** — toggle mensual/anual, tabla comparativa | ✅ Completo (2026-05-13) |
 
 ---
 
@@ -117,7 +132,8 @@ Storefront público en `/{slug}/tienda`. La DB ya soporta productos con variante
 
 ## Infraestructura
 
-- [x] **Tests** — 229 tests passing. 12 test files: `rate-limit.test.ts`, `monitoring.test.ts`, `plans.test.ts`, `plans-addons.test.ts`, `permissions.test.ts`, `currency.test.ts`, `staff.test.ts`, `orders-logic.test.ts`, `products-customers.test.ts`, `audit.test.ts`, `tienda-security.test.ts`, `email.test.ts`.
+- [x] **Tests** — 229 tests passing. 13 test files: `rate-limit.test.ts`, `monitoring.test.ts`, `plans.test.ts`, `plans-addons.test.ts`, `permissions.test.ts`, `currency.test.ts`, `staff.test.ts`, `orders-logic.test.ts`, `products-customers.test.ts`, `audit.test.ts`, `tienda-security.test.ts`, `email.test.ts`, `billing-qr.test.ts`.
+- [ ] **Tests pendientes** — `purchase-orders.test.ts`, `accounting-export.test.ts`
 - [x] **Cron jobs en Vercel** — confirmado en `vercel.json` (7 jobs).
 - [x] **Rate limiting** — aplicado en 7 endpoints: `/api/setup`, `/api/team`, `/api/payments`, `/api/products`, `/api/orders`, `/api/registro`, `/api/tienda/checkout`. Cleanup automático cada 60s.
 - [x] **Transacciones atómicas en órdenes** — `prisma.$transaction([create, ...decrements])`.

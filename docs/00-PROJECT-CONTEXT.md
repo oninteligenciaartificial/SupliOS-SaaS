@@ -70,8 +70,10 @@ export async function GET(request: Request) {
 | PRO | 800 | ∞ | ∞ | 10 |
 | EMPRESARIAL | 1250 | ∞ | ∞ | ∞ |
 
-## Estado actual (2026-05-11)
+## Estado actual (2026-05-13)
 
+- **Deploy:** Todos los cambios desplegados (67 archivos, 3808 inserciones)
+- **Producción:** https://gesti-os.vercel.app
 - Sistema de variantes por tipo de negocio: **implementado**
 - Add-ons: WhatsApp backend listo, SIAT/QR Bolivia scaffold, QR Bolivia upload implementado
 - QR Bolivia: merchants sin NIT pueden subir QR personal de banco/Tigo
@@ -81,7 +83,7 @@ export async function GET(request: Request) {
 - RLS: habilitado en `public.profiles` con políticas de acceso propio
 - Rate limiting: Upstash Redis con fallback in-memory, aplicado en múltiples endpoints
 - Sentry: error monitoring activo en producción
-- Tests: 229 tests pasando (18 nuevos de email)
+- Tests: 229 tests pasando (13 archivos)
 - Sidebar dinámico: labels cambian según `businessType` del org
 - Plan gating completo: variantes requieren CRECER+, tienda PRO+, etc.
 - Ver análisis completo en `docs/ANALYSIS.md`, log de sesiones en `docs/SESSION_LOG.md`

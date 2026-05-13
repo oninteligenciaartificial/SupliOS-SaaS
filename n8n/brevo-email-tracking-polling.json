@@ -7,13 +7,13 @@
           "interval": [
             {
               "field": "minutes",
-              "interval": 5
+              "minutesInterval": 5
             }
           ]
         }
       },
       "id": "schedule-trigger",
-      "name": "Every 5 Minutes",
+      "name": "Schedule Trigger",
       "type": "n8n-nodes-base.scheduleTrigger",
       "typeVersion": 1.2,
       "position": [240, 300]
@@ -41,30 +41,25 @@
             }
           ]
         },
-        "options": {}
+        "options": {
+          "timeout": 15000
+        }
       },
-      "id": "fetch-brevo-events",
+      "id": "fetch-brevo",
       "name": "Fetch Brevo Events",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
-      "position": [460, 300],
-      "credentials": {
-        "httpHeaderAuth": {
-          "id": "brevo-api",
-          "name": "Brevo API Key"
-        }
-      }
+      "position": [350, 300]
     },
     {
       "parameters": {
-        "mode": "runOnceForEachItem",
-        "jsCode": "const staticData = getWorkflowStaticData('global');\nconst processedIds = staticData.processedIds || [];\n\n// Skip if already processed\nif (processedIds.includes($json.messageId)) {\n  return null;\n}\n\n// Filter events from last 5 minutes only\nconst eventTime = new Date($json.date);\nconst fiveMinutesAgo = new Date(Date.now() - 5 * 60 * 1000);\nif (eventTime < fiveMinutesAgo) {\n  return null;\n}\n\n// Return formatted event for GestiOS\nreturn {\n  json: {\n    event: $json.event,\n    email: $json.email,\n    messageId: $json.messageId,\n    date: $json.date,\n    reason: $json.reason || ''\n  }\n};"
+        "jsCode": "// Filter events from last 5 minutes and deduplicate\nconst fiveMinutesAgo = Date.now() - (5 * 60 * 1000);\nconst processedIds = $getWorkflowStaticData(\"global\").processedIds || [];\n\nconst events = $input.all();\nconst newEvents = [];\n\nfor (const item of events) {\n  const eventId = item.json.messageId || item.json.id;\n  if (!eventId) continue;\n  \n  // Skip if already processed\n  if (processedIds.includes(eventId)) continue;\n  \n  // Check if event is from last 5 minutes\n  const eventTime = item.json.date ? new Date(item.json.date).getTime() : 0;\n  if (eventTime > 0 && eventTime < fiveMinutesAgo) continue;\n  \n  // Mark as processed\n  processedIds.push(eventId);\n  \n  // Format for GestiOS API\n  newEvents.push({\n    json: {\n      event: item.json.event,\n      email: item.json.email,\n      messageId: eventId,\n      time: item.json.date,\n      reason: item.json.reason || null,\n      tag: item.json.tag || null\n    }\n  });\n}\n\n// Keep only last 1000 processed IDs\nif (processedIds.length > 1000) {\n  processedIds.splice(0, processedIds.length - 1000);\n}\n$getWorkflowStaticData(\"global\").processedIds = processedIds;\n\nreturn newEvents;"
       },
-      "id": "filter-new-events",
+      "id": "filter-new",
       "name": "Filter New Events",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [680, 300]
+      "position": [460, 300]
     },
     {
       "parameters": {
@@ -85,28 +80,21 @@
         },
         "sendBody": true,
         "specifyBody": "json",
-        "jsonBody": "={\n  \"event\": \"{{ $json.event }}\",\n  \"email\": \"{{ $json.email }}\",\n  \"message-id\": \"{{ $json.messageId }}\",\n  \"date\": \"{{ $json.date }}\",\n  \"reason\": \"{{ $json.reason }}\"\n}",
-        "options": {}
+        "jsonBody": "={\n  \"events\": $input.all().map(item => item.json)\n}",
+        "options": {
+          "timeout": 10000
+        }
       },
-      "id": "send-to-gestios",
+      "id": "send-gestios",
       "name": "Send to GestiOS",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
-      "position": [900, 300]
-    },
-    {
-      "parameters": {
-        "jsCode": "const staticData = getWorkflowStaticData('global');\nconst existingIds = staticData.processedIds || [];\nconst newIds = $input.all().map(item => item.json.messageId);\n\n// Combine, deduplicate, keep last 1000 to prevent bloat\nconst allIds = [...new Set([...existingIds, ...newIds])].slice(-1000);\nstaticData.processedIds = allIds;\n\nreturn [{ json: { processed: newIds.length, total: allIds.length } }];"
-      },
-      "id": "update-static-data",
-      "name": "Update Static Data",
-      "type": "n8n-nodes-base.code",
-      "typeVersion": 2,
-      "position": [1120, 300]
+      "position": [570, 300],
+      "onError": "continueRegularOutput"
     }
   ],
   "connections": {
-    "Every 5 Minutes": {
+    "Schedule Trigger": {
       "main": [
         [
           {
@@ -138,29 +126,18 @@
           }
         ]
       ]
-    },
-    "Send to GestiOS": {
-      "main": [
-        [
-          {
-            "node": "Update Static Data",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
     }
+  },
+  "pinData": {},
+  "settings": {
+    "executionOrder": "v1",
+    "saveManualExecutions": true,
+    "saveExecutionProgress": true
   },
   "staticData": {
     "global": {
       "processedIds": []
     }
-  },
-  "settings": {
-    "executionOrder": "v1",
-    "saveManualExecutions": true,
-    "saveDataErrorExecution": "all",
-    "saveDataSuccessExecution": "all"
   },
   "tags": [
     {
@@ -172,11 +149,15 @@
       "color": "green"
     },
     {
+      "name": "brevo",
+      "color": "purple"
+    },
+    {
       "name": "polling",
       "color": "orange"
     }
   ],
   "triggerCount": 1,
-  "updatedAt": "2026-05-11T20:30:00.000Z",
+  "updatedAt": "2026-05-13T15:00:00.000Z",
   "versionId": "2"
 }

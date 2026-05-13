@@ -1,12 +1,14 @@
 {
-  "name": "GestiOS - Brevo Email Tracking",
+  "name": "GestiOS - Brevo Email Tracking (Webhook)",
   "nodes": [
     {
       "parameters": {
         "httpMethod": "POST",
         "path": "brevo-email-events",
         "responseMode": "responseNode",
-        "options": {}
+        "options": {
+          "responseCode": 200
+        }
       },
       "id": "webhook-trigger",
       "name": "Webhook Trigger",
@@ -14,54 +16,6 @@
       "typeVersion": 2,
       "position": [240, 300],
       "webhookId": "brevo-email-events"
-    },
-    {
-      "parameters": {
-        "method": "POST",
-        "url": "={{ $env.GESTIOS_URL }}/api/webhooks/brevo",
-        "authentication": "genericCredentialType",
-        "genericAuthType": "httpHeaderAuth",
-        "sendHeaders": true,
-        "headerParameters": {
-          "parameters": [
-            {
-              "name": "Authorization",
-              "value": "Bearer {{ $env.BREVO_WEBHOOK_KEY }}"
-            },
-            {
-              "name": "Content-Type",
-              "value": "application/json"
-            }
-          ]
-        },
-        "sendBody": true,
-        "bodyParameters": {
-          "parameters": [
-            {
-              "name": "events",
-              "value": "={{ $json.body }}"
-            }
-          ]
-        },
-        "options": {}
-      },
-      "id": "http-request",
-      "name": "Send to GestiOS API",
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.2,
-      "position": [460, 300]
-    },
-    {
-      "parameters": {
-        "respondWith": "json",
-        "responseBody": "={\"ok\": true, \"processed\": 1}",
-        "options": {}
-      },
-      "id": "respond-webhook",
-      "name": "Respond to Webhook",
-      "type": "n8n-nodes-base.respondToWebhook",
-      "typeVersion": 1,
-      "position": [680, 300]
     },
     {
       "parameters": {
@@ -78,7 +32,18 @@
               "rightValue": "",
               "operator": {
                 "type": "string",
-                "operation": "exists"
+                "operation": "exists",
+                "name": "filter.operator.exists"
+              }
+            },
+            {
+              "id": "filter-valid-events",
+              "leftValue": "={{ $json.body.event }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "notEmpty",
+                "name": "filter.operator.notEmpty"
               }
             }
           ],
@@ -91,6 +56,59 @@
       "type": "n8n-nodes-base.filter",
       "typeVersion": 2,
       "position": [350, 300]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Deduplicate events using messageId\nconst eventId = $json.body.messageId || $json.body.X-Mailin-custom;\nif (!eventId) return $json;\n\nconst processed = $getWorkflowStaticData(\"global\").processedIds || [];\nif (processed.includes(eventId)) {\n  return null; // Skip duplicate\n}\n\n// Add to processed list (keep last 5000)\nprocessed.push(eventId);\nif (processed.length > 5000) processed.splice(0, processed.length - 5000);\n$getWorkflowStaticData(\"global\").processedIds = processed;\n\nreturn $json;"
+      },
+      "id": "dedup",
+      "name": "Deduplicate Events",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [460, 300]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.GESTIOS_URL }}/api/webhooks/brevo",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "Bearer {{ $env.BREVO_WEBHOOK_KEY }}"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"events\": [\n    {{\n      \"event\": $json.body.event,\n      \"email\": $json.body.email,\n      \"id\": $json.body.messageId,\n      \"time\": $json.body.date,\n      \"reason\": $json.body.reason || null,\n      \"tag\": $json.body.tag || null\n    }}\n  ]\n}",
+        "options": {
+          "timeout": 10000
+        }
+      },
+      "id": "http-request",
+      "name": "Send to GestiOS API",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [570, 300],
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={\"ok\": true, \"processed\": 1}",
+        "options": {}
+      },
+      "id": "respond-webhook",
+      "name": "Respond to Webhook",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [680, 300]
     }
   ],
   "connections": {
@@ -106,6 +124,17 @@
       ]
     },
     "Filter Valid Events": {
+      "main": [
+        [
+          {
+            "node": "Deduplicate Events",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Deduplicate Events": {
       "main": [
         [
           {
@@ -132,10 +161,15 @@
   "settings": {
     "executionOrder": "v1",
     "saveManualExecutions": true,
+    "saveExecutionProgress": true,
     "callerPolicy": "workflowsFromSameOwner",
     "errorWorkflow": ""
   },
-  "staticData": null,
+  "staticData": {
+    "global": {
+      "processedIds": []
+    }
+  },
   "tags": [
     {
       "name": "gestios",
@@ -144,9 +178,13 @@
     {
       "name": "email",
       "color": "green"
+    },
+    {
+      "name": "brevo",
+      "color": "purple"
     }
   ],
   "triggerCount": 1,
-  "updatedAt": "2026-05-11T18:41:00.000Z",
-  "versionId": "1"
+  "updatedAt": "2026-05-13T15:00:00.000Z",
+  "versionId": "2"
 }

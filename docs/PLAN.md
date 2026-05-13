@@ -1,6 +1,6 @@
 # GestiOS — Plan de Trabajo
 
-Generado: 2026-05-06. Basado en análisis completo del codebase y documentación.
+Generado: 2026-05-06. Actualizado: 2026-05-13. Basado en análisis completo del codebase y documentación.
 
 ---
 
@@ -34,6 +34,7 @@ Generado: 2026-05-06. Basado en análisis completo del codebase y documentación
 | WhatsApp | ⚠️ Backend listo | Falta config externa |
 | SIAT | ⚠️ Scaffold | Requiere intermediario externo |
 | E-commerce | ✅ Implementado | /{slug}/tienda |
+| Deploy | ✅ Todos los cambios desplegados | 67 archivos, 2026-05-13 |
 
 ---
 

@@ -1,10 +1,13 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, Suspense } from "react";
 import { createClient } from "@/lib/supabase/client";
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 
-export default function SignupPage() {
+function SignupForm() {
+  const searchParams = useSearchParams();
+  const planParam = searchParams.get("plan");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
@@ -12,6 +15,15 @@ export default function SignupPage() {
   const [done, setDone] = useState(false);
 
   const inp = "w-full px-4 py-3 rounded-xl bg-white/5 border border-white/10 text-white placeholder-brand-muted focus:outline-none focus:border-brand-kinetic-orange transition-colors";
+
+  const PLAN_NAMES: Record<string, string> = {
+    basico: "Básico",
+    crecer: "Crecer",
+    pro: "Pro",
+    empresarial: "Empresarial",
+  };
+
+  const selectedPlan = planParam ? PLAN_NAMES[planParam] : null;
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -45,6 +57,11 @@ export default function SignupPage() {
             Te enviamos un enlace de confirmacion a <span className="text-white font-medium">{email}</span>.
             Haz clic en el enlace para activar tu cuenta y configurar tu tienda.
           </p>
+          {selectedPlan && (
+            <p className="text-brand-muted text-xs">
+              Plan seleccionado: <span className="text-brand-kinetic-orange font-bold">{selectedPlan}</span>
+            </p>
+          )}
           <Link href="/login" className="block text-brand-kinetic-orange text-sm hover:underline mt-4">
             Ya confirme mi correo → Entrar
           </Link>
@@ -61,6 +78,11 @@ export default function SignupPage() {
             GestiOS.
           </h1>
           <p className="text-brand-muted mt-2 text-sm">Crea tu cuenta — 7 dias gratis, sin tarjeta</p>
+          {selectedPlan && (
+            <div className="mt-3 inline-flex items-center gap-2 px-3 py-1 rounded-full bg-brand-kinetic-orange/10 border border-brand-kinetic-orange/20 text-brand-kinetic-orange text-xs font-medium">
+              Plan {selectedPlan} seleccionado
+            </div>
+          )}
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-4">
@@ -107,5 +129,13 @@ export default function SignupPage() {
         </p>
       </div>
     </div>
+  );
+}
+
+export default function SignupPage() {
+  return (
+    <Suspense>
+      <SignupForm />
+    </Suspense>
   );
 }
