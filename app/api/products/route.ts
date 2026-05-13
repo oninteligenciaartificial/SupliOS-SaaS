@@ -68,7 +68,7 @@ export async function POST(request: Request) {
   if (!hasPermission(profile.role, "products:create")) return NextResponse.json({ error: "Sin permiso" }, { status: 403 });
 
   // Rate limit: 30 product creations per minute per org
-  const rateLimited = checkOrgRateLimit(profile.organizationId, "products", { windowMs: 60_000, max: 30 });
+  const rateLimited = await checkOrgRateLimit(profile.organizationId, "products", { windowMs: 60_000, max: 30 });
   if (rateLimited) return rateLimited;
 
   const { maxProducts } = PLAN_LIMITS[profile.plan];

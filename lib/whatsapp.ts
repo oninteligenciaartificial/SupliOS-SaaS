@@ -1,8 +1,11 @@
+import { prisma } from "@/lib/prisma";
+
 const WA_API_URL = `https://graph.facebook.com/v20.0`;
 
 interface SendTextMessageArgs {
   to: string;
   text: string;
+  organizationId?: string;
 }
 
 interface SendTemplateMessageArgs {
@@ -10,20 +13,39 @@ interface SendTemplateMessageArgs {
   templateName: string;
   languageCode?: string;
   components?: unknown[];
+  organizationId?: string;
+}
+
+async function getPhoneNumberId(organizationId?: string): Promise<{ phoneNumberId: string; accessToken: string } | { error: string }> {
+  const accessToken = process.env.WA_ACCESS_TOKEN;
+  if (!accessToken) return { error: "WA_ACCESS_TOKEN no configurado" };
+
+  // If organizationId provided, look up the org's WhatsApp addon for their phone number
+  if (organizationId) {
+    const addon = await prisma.orgAddon.findFirst({
+      where: { organizationId, addon: "WHATSAPP", active: true },
+      select: { phoneNumberId: true },
+    });
+    if (addon?.phoneNumberId) {
+      return { phoneNumberId: addon.phoneNumberId, accessToken };
+    }
+    // Org has WhatsApp addon but no phoneNumberId set — use default
+  }
+
+  const phoneNumberId = process.env.WA_PHONE_NUMBER_ID;
+  if (!phoneNumberId) return { error: "WA_PHONE_NUMBER_ID no configurado" };
+
+  return { phoneNumberId, accessToken };
 }
 
 export async function sendWhatsAppText(args: SendTextMessageArgs): Promise<{ success: boolean; error?: string }> {
-  const phoneNumberId = process.env.WA_PHONE_NUMBER_ID;
-  const accessToken = process.env.WA_ACCESS_TOKEN;
+  const config = await getPhoneNumberId(args.organizationId);
+  if ("error" in config) return { success: false, error: config.error };
 
-  if (!phoneNumberId || !accessToken) {
-    return { success: false, error: "WhatsApp no configurado" };
-  }
-
-  const res = await fetch(`${WA_API_URL}/${phoneNumberId}/messages`, {
+  const res = await fetch(`${WA_API_URL}/${config.phoneNumberId}/messages`, {
     method: "POST",
     headers: {
-      Authorization: `Bearer ${accessToken}`,
+      Authorization: `Bearer ${config.accessToken}`,
       "Content-Type": "application/json",
     },
     body: JSON.stringify({
@@ -43,17 +65,13 @@ export async function sendWhatsAppText(args: SendTextMessageArgs): Promise<{ suc
 }
 
 export async function sendWhatsAppTemplate(args: SendTemplateMessageArgs): Promise<{ success: boolean; error?: string }> {
-  const phoneNumberId = process.env.WA_PHONE_NUMBER_ID;
-  const accessToken = process.env.WA_ACCESS_TOKEN;
+  const config = await getPhoneNumberId(args.organizationId);
+  if ("error" in config) return { success: false, error: config.error };
 
-  if (!phoneNumberId || !accessToken) {
-    return { success: false, error: "WhatsApp no configurado" };
-  }
-
-  const res = await fetch(`${WA_API_URL}/${phoneNumberId}/messages`, {
+  const res = await fetch(`${WA_API_URL}/${config.phoneNumberId}/messages`, {
     method: "POST",
     headers: {
-      Authorization: `Bearer ${accessToken}`,
+      Authorization: `Bearer ${config.accessToken}`,
       "Content-Type": "application/json",
     },
     body: JSON.stringify({

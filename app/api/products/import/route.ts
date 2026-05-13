@@ -14,7 +14,7 @@ export async function POST(request: Request) {
 
   if (!canUseFeature(profile.plan, "csv_import")) return NextResponse.json(planGateError("csv_import"), { status: 403 });
 
-  const rateLimited = checkOrgRateLimit(profile.organizationId, "products-import", RATE_LIMITS.import);
+  const rateLimited = await checkOrgRateLimit(profile.organizationId, "products-import", RATE_LIMITS.import);
   if (rateLimited) return rateLimited;
 
   let formData: FormData;

@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Check } from "lucide-react";
+import { Check, Store, Shirt, Pill, Monitor, Wrench, Dumbbell } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { prisma } from "@/lib/prisma";
 import { redirect } from "next/navigation";
@@ -13,6 +13,15 @@ const FEATURES = [
   "Alertas de stock automaticas",
   "Sucursales multiples",
   "Emails automaticos a clientes",
+];
+
+const BUSINESS_TYPES = [
+  { icon: Store, label: "General", desc: "Productos variados" },
+  { icon: Shirt, label: "Ropa", desc: "Tallas y colores" },
+  { icon: Dumbbell, label: "Suplementos", desc: "Sabores y vencimientos" },
+  { icon: Monitor, label: "Electronica", desc: "Garantias y modelos" },
+  { icon: Pill, label: "Farmacia", desc: "Dosis y lotes" },
+  { icon: Wrench, label: "Ferreteria", desc: "Medidas y materiales" },
 ];
 
 export default async function HomePage() {
@@ -49,13 +58,13 @@ export default async function HomePage() {
         </div>
 
         <h1 className="text-4xl sm:text-6xl font-display font-bold tracking-tight leading-tight">
-          Gestiona tu negocio
+          El sistema que se adapta
           <br />
-          <span className="text-brand-kinetic-orange">desde un solo lugar</span>
+          <span className="text-brand-kinetic-orange">a tu tipo de negocio</span>
         </h1>
 
         <p className="text-brand-muted text-lg sm:text-xl max-w-2xl mx-auto leading-relaxed">
-          POS, inventario, pedidos, clientes y reportes. Todo lo que necesitas para operar y crecer, sin complicaciones.
+          POS, inventario, pedidos, clientes y reportes. Con etiquetas, atributos y funciones especificas para ropa, farmacia, electronica, suplementos, ferreteria y mas.
         </p>
 
         <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
@@ -71,6 +80,23 @@ export default async function HomePage() {
           >
             Ver planes
           </Link>
+        </div>
+      </section>
+
+      {/* Business Types */}
+      <section className="max-w-4xl mx-auto px-6 pb-16">
+        <div className="text-center mb-8">
+          <h2 className="text-2xl font-display font-bold mb-2">Un sistema, muchos negocios</h2>
+          <p className="text-brand-muted text-sm">La interfaz cambia segun tu tipo de negocio</p>
+        </div>
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4">
+          {BUSINESS_TYPES.map((bt) => (
+            <div key={bt.label} className="glass-panel rounded-2xl p-4 text-center space-y-2 hover:border-brand-kinetic-orange/30 transition-colors">
+              <bt.icon size={24} className="text-brand-kinetic-orange mx-auto" />
+              <div className="text-white text-sm font-medium">{bt.label}</div>
+              <div className="text-brand-muted text-xs">{bt.desc}</div>
+            </div>
+          ))}
         </div>
       </section>
 
@@ -93,8 +119,8 @@ export default async function HomePage() {
 
       {/* Pricing teaser */}
       <section className="max-w-4xl mx-auto px-6 pb-20 text-center space-y-6">
-        <h2 className="text-2xl font-display font-bold">Planes desde <span className="text-brand-kinetic-orange">$39/mes</span></h2>
-        <p className="text-brand-muted">Sin contratos. Sin permanencia. Cambia o cancela cuando quieras.</p>
+        <h2 className="text-2xl font-display font-bold">Planes desde <span className="text-brand-kinetic-orange">Bs. 350/mes</span></h2>
+        <p className="text-brand-muted">Sin contratos. Sin permanencia. Paga con QR o transferencia bancaria.</p>
         <Link href="/pricing" className="inline-block px-6 py-3 rounded-full border border-white/10 text-sm text-white hover:border-brand-kinetic-orange hover:text-brand-kinetic-orange transition-colors">
           Ver todos los planes →
         </Link>

@@ -177,4 +177,34 @@ async function applyStatusChange(
         })]
       : []),
   ]);
+
+  // If this QR is for a plan payment (orderId starts with "plan_"), activate the plan
+  if (status === "PAGADO") {
+    await tryActivatePlanFromQr(orderId);
+  }
+}
+
+// Activates a plan when a QR payment for a plan is confirmed.
+async function tryActivatePlanFromQr(orderId: string): Promise<void> {
+  if (!orderId.startsWith("plan_")) return;
+
+  const parts = orderId.replace("plan_", "").split("_");
+  if (parts.length < 3) return;
+
+  const plan = parts[0] as "BASICO" | "CRECER" | "PRO" | "EMPRESARIAL";
+  const months = parseInt(parts[1], 10);
+  const orgId = parts.slice(2).join("_");
+
+  if (isNaN(months) || months < 1 || months > 12) return;
+
+  const planExpiresAt = new Date(Date.now() + months * 30 * 24 * 60 * 60 * 1000);
+
+  await prisma.organization.update({
+    where: { id: orgId },
+    data: {
+      plan,
+      planExpiresAt,
+      trialEndsAt: null,
+    },
+  });
 }

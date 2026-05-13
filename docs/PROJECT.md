@@ -24,8 +24,8 @@ Reemplazar hojas de cálculo y sistemas fragmentados con una sola plataforma: pu
 | Módulo | Ruta | Descripción |
 |---|---|---|
 | Dashboard | `/dashboard` | KPIs: ventas hoy, pedidos, stock bajo |
-| Punto de Venta | `/pos` | Venta rápida, selector de variantes, carrito |
-| Inventario | `/inventory` | CRUD productos, variantes, stock entries |
+| Punto de Venta | `/pos` | Venta rápida, selector de variantes, carrito, QR personal |
+| Inventario | `/inventory` | CRUD productos, variantes, stock entries, imagen |
 | Pedidos | `/orders` | Gestión y estados de órdenes |
 | Clientes | `/customers` | CRM básico, puntos de lealtad, importación CSV |
 | Reportes | `/reports` | Ventas por período (plan CRECER+) |
@@ -37,7 +37,8 @@ Reemplazar hojas de cálculo y sistemas fragmentados con una sola plataforma: pu
 | WhatsApp | `/conversations` | Conversaciones (add-on, próximamente) |
 | Equipo | `/staff` | Gestión de usuarios y roles |
 | Configuración | `/settings` | Org, tipo de negocio, moneda |
-| Facturación | `/billing` | Plan actual, add-ons |
+| Facturación | `/billing` | Plan actual, add-ons, QR Bolivia upload |
+| Email Stats | `/email-stats` | Métricas de email (SUPERADMIN) |
 
 ## Planes
 
@@ -55,12 +56,15 @@ Reemplazar hojas de cálculo y sistemas fragmentados con una sola plataforma: pu
 | Reportes | CRECER |
 | Proveedores | CRECER |
 | CSV import/export | CRECER |
+| Variantes de productos | CRECER |
 | Página pública de registro | PRO |
-| Email básico | PRO |
-| Email avanzado | EMPRESARIAL |
+| Tienda online | PRO |
+| Pagos QR (upload personal) | PRO |
+| Email automático | PRO |
 | Sucursales | EMPRESARIAL |
 | Roles avanzados | EMPRESARIAL |
 | Audit log | EMPRESARIAL |
+| Facturación SIAT | EMPRESARIAL |
 
 ## Add-ons (todos próximamente)
 

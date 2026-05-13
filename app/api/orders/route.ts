@@ -74,7 +74,7 @@ export async function POST(request: Request) {
   if (!hasPermission(profile.role, "orders:create")) return NextResponse.json({ error: "Sin permiso" }, { status: 403 });
 
   // Rate limit: 60 orders per minute per org
-  const rateLimited = checkOrgRateLimit(profile.organizationId, "orders", { windowMs: 60_000, max: 60 });
+  const rateLimited = await checkOrgRateLimit(profile.organizationId, "orders", { windowMs: 60_000, max: 60 });
   if (rateLimited) return rateLimited;
 
   const staffProfile = await prisma.profile.findUnique({ where: { userId: user.id }, select: { id: true } });

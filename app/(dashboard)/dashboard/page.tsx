@@ -2,7 +2,7 @@ import { prisma } from "@/lib/prisma";
 import { redirect } from "next/navigation";
 import { getTenantProfile } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
-import { Package, ShoppingCart, AlertTriangle, DollarSign, Mail, Plus, RefreshCcw, PackageSearch } from "lucide-react";
+import { Package, ShoppingCart, AlertTriangle, DollarSign, Mail, Plus, RefreshCcw, PackageSearch, Sparkles, ArrowRight } from "lucide-react";
 import { StockAlertButton } from "../StockAlertButton";
 
 export default async function Dashboard() {
@@ -28,6 +28,7 @@ export default async function Dashboard() {
   type OrderTotal = { total: { toString(): string } };
 
   const totalProducts = await prisma.product.count({ where: { organizationId: orgId, active: true } });
+  const totalCustomers = await prisma.customer.count({ where: { organizationId: orgId } });
   const allProducts: StockItem[] = await prisma.product.findMany({
     where: { organizationId: orgId, active: true },
     select: { id: true, name: true, stock: true, minStock: true },
@@ -41,6 +42,8 @@ export default async function Dashboard() {
 
   const monthlyRevenue = monthlyOrders.reduce((sum: number, o: OrderTotal) => sum + Number(o.total), 0);
   const lowStockAlerts = allProducts.filter((p: StockItem) => p.stock <= p.minStock).slice(0, 5);
+
+  const isEmpty = totalProducts === 0 && totalCustomers === 0;
 
   const kpis = [
     { title: "Inventario Total",  value: String(totalProducts),                  label: "SKUs Activos",    icon: Package,       color: "text-brand-kinetic-orange" },
@@ -67,6 +70,42 @@ export default async function Dashboard() {
           </a>
         </div>
       </header>
+
+      {/* Onboarding card for empty accounts */}
+      {isEmpty && (
+        <section className="glass-panel rounded-3xl p-6 sm:p-8 border-brand-kinetic-orange/20 animate-pop">
+          <div className="flex items-start gap-4">
+            <div className="p-3 rounded-2xl bg-brand-kinetic-orange/15 flex-shrink-0">
+              <Sparkles size={24} className="text-brand-kinetic-orange" />
+            </div>
+            <div className="space-y-3 flex-1">
+              <h2 className="text-xl font-bold text-white">Bienvenido a GestiOS!</h2>
+              <p className="text-brand-muted text-sm leading-relaxed">
+                Tu cuenta esta lista. Para explorar todas las funciones, puedes cargar datos de ejemplo
+                (productos, clientes, pedidos) o empezar desde cero.
+              </p>
+              <div className="flex flex-wrap gap-3">
+                <button
+                  id="load-sample-data"
+                  className="px-5 py-2.5 rounded-xl bg-gradient-to-br from-brand-kinetic-orange to-brand-kinetic-orange-light text-black font-bold text-sm flex items-center gap-2 shadow-[0_0_20px_rgba(255,107,0,0.3)] hover:shadow-[0_0_30px_rgba(255,107,0,0.5)] transition-all"
+                >
+                  <Sparkles size={14} /> Cargar datos de ejemplo
+                </button>
+                <a
+                  href="/inventory"
+                  className="px-5 py-2.5 rounded-xl border border-white/10 text-white text-sm font-bold flex items-center gap-2 hover:border-white/30 transition-colors"
+                >
+                  Empezar desde cero <ArrowRight size={14} />
+                </a>
+              </div>
+              <p className="text-xs text-brand-muted">
+                Los datos de ejemplo incluyen 5 productos, 5 clientes, 3 descuentos y 5 pedidos.
+                Puedes eliminarlos despues desde Configuración.
+              </p>
+            </div>
+          </div>
+        </section>
+      )}
 
       <section className="kpi-grid grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-6">
         {kpis.map((kpi) => (
@@ -98,7 +137,7 @@ export default async function Dashboard() {
             <div className="divide-y divide-white/5">
               {lowStockAlerts.length === 0 && (
                 <div className="py-8 px-6 text-center text-brand-muted">
-                  Todo el inventario esta en buen nivel
+                  {isEmpty ? "Carga datos de ejemplo para ver alertas de stock" : "Todo el inventario esta en buen nivel"}
                 </div>
               )}
               {lowStockAlerts.map((item) => (
@@ -139,7 +178,7 @@ export default async function Dashboard() {
                 Confirmacion automatica al crear pedido
               </div>
               <div className="flex items-center gap-2">
-                <span className="w-1.5 h-1.5 rounded-full bg-brand-growth-neon flex-shrink-0" />
+                <span className="w-1.5 h.5 rounded-full bg-brand-growth-neon flex-shrink-0" />
                 Actualizacion de estado al cliente
               </div>
               <div className="flex items-center gap-2">
@@ -153,6 +192,25 @@ export default async function Dashboard() {
           </div>
         </section>
       </div>
+
+      <script dangerouslySetInnerHTML={{ __html: `
+        document.getElementById('load-sample-data')?.addEventListener('click', async function() {
+          this.textContent = 'Cargando...';
+          this.disabled = true;
+          try {
+            const res = await fetch('/api/sample-data', { method: 'POST' });
+            if (res.ok) {
+              window.location.reload();
+            } else {
+              this.textContent = 'Error al cargar datos';
+              this.disabled = false;
+            }
+          } catch {
+            this.textContent = 'Error al cargar datos';
+            this.disabled = false;
+          }
+        });
+      `}} />
     </div>
   );
 }

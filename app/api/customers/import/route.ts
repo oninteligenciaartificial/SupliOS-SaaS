@@ -17,7 +17,7 @@ export async function POST(request: Request) {
     );
   }
 
-  const rateLimited = checkOrgRateLimit(profile.organizationId, "customers-import", RATE_LIMITS.import);
+  const rateLimited = await checkOrgRateLimit(profile.organizationId, "customers-import", RATE_LIMITS.import);
   if (rateLimited) return rateLimited;
 
   let text: string;

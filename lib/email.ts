@@ -1,5 +1,29 @@
-const FROM_NAME = "GestiOS";
-const FROM_EMAIL = process.env.EMAIL_FROM_ADDRESS ?? "noreply@gestios.app";
+import { prisma } from "@/lib/prisma";
+import { reportAsyncError } from "@/lib/monitoring";
+import { consumeRateLimit } from "@/lib/rate-limit";
+
+const FROM_NAME = process.env.BREVO_SENDER_NAME ?? "GestiOS";
+const FROM_EMAIL = process.env.BREVO_SENDER_EMAIL ?? process.env.EMAIL_FROM_ADDRESS ?? "oninteligenciaartificial@gmail.com";
+
+// Daily email counter to stay under Brevo free plan limit (300/day)
+const DAILY_EMAIL_LIMIT = 280; // Leave 20 as buffer
+
+async function checkDailyEmailLimit(): Promise<boolean> {
+  const today = new Date().toISOString().split("T")[0];
+  const key = `email:daily:${today}`;
+  const result = await consumeRateLimit(key, { windowMs: 24 * 60 * 60 * 1000, max: DAILY_EMAIL_LIMIT });
+  if (!result.allowed) {
+    console.warn(`[email] Daily email limit reached (${DAILY_EMAIL_LIMIT}). Emails queued for tomorrow.`);
+    return false;
+  }
+  return true;
+}
+
+if (!process.env.BREVO_API_KEY) {
+  // Silently skip — emails are fire-and-forget
+} else if (!FROM_EMAIL || FROM_EMAIL === "noreply@gestios.app") {
+  console.warn("[email] BREVO_SENDER_EMAIL not configured. Using default sender. Set BREVO_SENDER_EMAIL in Vercel to avoid deliverability issues.");
+}
 
 interface OrderItem {
   name: string;
@@ -96,43 +120,120 @@ const PAYMENT_LABELS: Record<string, string> = {
   TRANSFERENCIA: "Transferencia",
 };
 
-async function sendEmail(to: string, subject: string, htmlContent: string, toName?: string) {
-  const apiKey = process.env.BREVO_API_KEY;
-  if (!apiKey) return;
+// =============================================
+// Core email functions with logging
+// =============================================
 
-  await fetch("https://api.brevo.com/v3/smtp/email", {
-    method: "POST",
-    headers: {
-      "api-key": apiKey,
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({
-      sender: { name: FROM_NAME, email: FROM_EMAIL },
-      to: [{ email: to, name: toName ?? to }],
-      subject,
-      htmlContent,
-    }),
-  });
+async function logEmailSend(
+  organizationId: string | null,
+  to: string,
+  type: string,
+  subject: string,
+  status: "SENT" | "FAILED",
+  brevoMessageId?: string,
+  error?: string
+) {
+  try {
+    await prisma.emailLog.create({
+      data: {
+        organizationId,
+        to,
+        type,
+        subject,
+        status,
+        brevoMessageId,
+        error,
+      },
+    });
+  } catch (logError) {
+    // Don't let logging failures break email sending
+    console.error("[email] Failed to log email:", logError);
+  }
 }
 
-async function sendPlainEmail(to: string, subject: string, textContent: string) {
+async function sendEmail(to: string, subject: string, htmlContent: string, toName?: string, type?: string, organizationId?: string | null) {
   const apiKey = process.env.BREVO_API_KEY;
-  if (!apiKey) return;
+  if (!apiKey) {
+    await logEmailSend(organizationId ?? null, to, type ?? "unknown", subject, "FAILED", undefined, "BREVO_API_KEY not configured");
+    return;
+  }
 
-  await fetch("https://api.brevo.com/v3/smtp/email", {
-    method: "POST",
-    headers: {
-      "api-key": apiKey,
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({
-      sender: { name: FROM_NAME, email: FROM_EMAIL },
-      to: [{ email: to }],
-      subject,
-      textContent,
-    }),
-  });
+  const withinLimit = await checkDailyEmailLimit();
+  if (!withinLimit) {
+    await logEmailSend(organizationId ?? null, to, type ?? "unknown", subject, "FAILED", undefined, "Daily email limit reached");
+    return;
+  }
+
+  try {
+    const response = await fetch("https://api.brevo.com/v3/smtp/email", {
+      method: "POST",
+      headers: {
+        "api-key": apiKey,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        sender: { name: FROM_NAME, email: FROM_EMAIL },
+        to: [{ email: to, name: toName ?? to }],
+        subject,
+        htmlContent,
+      }),
+    });
+
+    if (response.ok) {
+      const data = await response.json() as { messageId?: string };
+      await logEmailSend(organizationId ?? null, to, type ?? "unknown", subject, "SENT", data.messageId);
+    } else {
+      const errorBody = await response.text().catch(() => "Unknown error");
+      await logEmailSend(organizationId ?? null, to, type ?? "unknown", subject, "FAILED", undefined, `Brevo API error: ${response.status} ${errorBody}`);
+    }
+  } catch (error) {
+    await logEmailSend(organizationId ?? null, to, type ?? "unknown", subject, "FAILED", undefined, error instanceof Error ? error.message : String(error));
+  }
 }
+
+async function sendPlainEmail(to: string, subject: string, textContent: string, type?: string, organizationId?: string | null) {
+  const apiKey = process.env.BREVO_API_KEY;
+  if (!apiKey) {
+    await logEmailSend(organizationId ?? null, to, type ?? "unknown", subject, "FAILED", undefined, "BREVO_API_KEY not configured");
+    return;
+  }
+
+  const withinLimit = await checkDailyEmailLimit();
+  if (!withinLimit) {
+    await logEmailSend(organizationId ?? null, to, type ?? "unknown", subject, "FAILED", undefined, "Daily email limit reached");
+    return;
+  }
+
+  try {
+    const response = await fetch("https://api.brevo.com/v3/smtp/email", {
+      method: "POST",
+      headers: {
+        "api-key": apiKey,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        sender: { name: FROM_NAME, email: FROM_EMAIL },
+        to: [{ email: to }],
+        subject,
+        textContent,
+      }),
+    });
+
+    if (response.ok) {
+      const data = await response.json() as { messageId?: string };
+      await logEmailSend(organizationId ?? null, to, type ?? "unknown", subject, "SENT", data.messageId);
+    } else {
+      const errorBody = await response.text().catch(() => "Unknown error");
+      await logEmailSend(organizationId ?? null, to, type ?? "unknown", subject, "FAILED", undefined, `Brevo API error: ${response.status} ${errorBody}`);
+    }
+  } catch (error) {
+    await logEmailSend(organizationId ?? null, to, type ?? "unknown", subject, "FAILED", undefined, error instanceof Error ? error.message : String(error));
+  }
+}
+
+// =============================================
+// Template
+// =============================================
 
 function baseTemplate(content: string, orgName: string) {
   return `<!DOCTYPE html>
@@ -157,6 +258,10 @@ function baseTemplate(content: string, orgName: string) {
 </body>
 </html>`;
 }
+
+// =============================================
+// Email types
+// =============================================
 
 export async function sendOrderConfirmation(args: SendOrderConfirmationArgs) {
   const itemsHtml = args.items.map(i =>
@@ -189,7 +294,7 @@ export async function sendOrderConfirmation(args: SendOrderConfirmationArgs) {
     <p style="margin:20px 0 0;font-size:13px;color:#666;">Folio de pedido: <code style="color:#ff6b00;">#${args.orderId.slice(-8).toUpperCase()}</code></p>
   `;
 
-  await sendEmail(args.to, `Pedido recibido — ${args.orgName}`, baseTemplate(content, args.orgName), args.customerName);
+  await sendEmail(args.to, `Pedido recibido — ${args.orgName}`, baseTemplate(content, args.orgName), args.customerName, "order_confirmation");
 }
 
 export async function sendOrderStatusUpdate(args: SendOrderStatusArgs) {
@@ -206,7 +311,7 @@ export async function sendOrderStatusUpdate(args: SendOrderStatusArgs) {
     <p style="margin:0;font-size:13px;color:#666;">Folio: <code style="color:#ff6b00;">#${args.orderId.slice(-8).toUpperCase()}</code></p>
   `;
 
-  await sendEmail(args.to, `Tu pedido esta ${statusLabel} — ${args.orgName}`, baseTemplate(content, args.orgName), args.customerName);
+  await sendEmail(args.to, `Tu pedido esta ${statusLabel} — ${args.orgName}`, baseTemplate(content, args.orgName), args.customerName, "order_status_update");
 }
 
 export async function sendLowStockAlert(args: SendLowStockAlertArgs) {
@@ -232,7 +337,7 @@ export async function sendLowStockAlert(args: SendLowStockAlertArgs) {
     <p style="margin:24px 0 0;font-size:13px;color:#666;">Entra a GestiOS para reabastecer tu inventario.</p>
   `;
 
-  await sendEmail(args.to, `${args.products.length} producto(s) con stock bajo — ${args.orgName}`, baseTemplate(content, args.orgName));
+  await sendEmail(args.to, `${args.products.length} producto(s) con stock bajo — ${args.orgName}`, baseTemplate(content, args.orgName), undefined, "low_stock_alert");
 }
 
 export async function sendWelcomeEmail(args: SendWelcomeEmailArgs) {
@@ -246,7 +351,7 @@ export async function sendWelcomeEmail(args: SendWelcomeEmailArgs) {
     <p style="margin:0;font-size:13px;color:#666;">Si tienes alguna pregunta, contacta directamente a ${args.orgName}.</p>
   `;
 
-  await sendEmail(args.to, `Bienvenido/a a ${args.orgName}`, baseTemplate(content, args.orgName), args.customerName);
+  await sendEmail(args.to, `Bienvenido/a a ${args.orgName}`, baseTemplate(content, args.orgName), args.customerName, "welcome_email");
 }
 
 export async function sendBirthdayEmail(args: SendBirthdayEmailArgs) {
@@ -261,7 +366,7 @@ export async function sendBirthdayEmail(args: SendBirthdayEmailArgs) {
     <p style="margin:0;font-size:13px;color:#666;">Valido solo hoy. Presentalo al realizar tu pedido.</p>
   `;
 
-  await sendEmail(args.to, `Feliz cumpleanos ${args.customerName}! Regalo de ${args.orgName}`, baseTemplate(content, args.orgName), args.customerName);
+  await sendEmail(args.to, `Feliz cumpleanos ${args.customerName}! Regalo de ${args.orgName}`, baseTemplate(content, args.orgName), args.customerName, "birthday_email");
 }
 
 export async function sendLoyaltyPointsEmail(args: SendLoyaltyPointsEmailArgs) {
@@ -279,7 +384,7 @@ export async function sendLoyaltyPointsEmail(args: SendLoyaltyPointsEmailArgs) {
     <p style="margin:0;font-size:13px;color:#666;">Sigue comprando en <strong style="color:#ff6b00;">${args.orgName}</strong> para acumular mas puntos.</p>
   `;
 
-  await sendEmail(args.to, `+${args.pointsEarned} puntos acumulados en ${args.orgName}`, baseTemplate(content, args.orgName), args.customerName);
+  await sendEmail(args.to, `+${args.pointsEarned} puntos acumulados en ${args.orgName}`, baseTemplate(content, args.orgName), args.customerName, "loyalty_points_email");
 }
 
 export async function sendNewOrderAlert(args: SendNewOrderAlertArgs) {
@@ -313,7 +418,7 @@ export async function sendNewOrderAlert(args: SendNewOrderAlertArgs) {
     <p style="margin:16px 0 0;font-size:13px;color:#666;">Folio: <code style="color:#ff6b00;">#${args.orderId.slice(-8).toUpperCase()}</code></p>
   `;
 
-  await sendEmail(args.to, `Nuevo pedido de ${args.customerName} — ${args.orgName}`, baseTemplate(content, args.orgName));
+  await sendEmail(args.to, `Nuevo pedido de ${args.customerName} — ${args.orgName}`, baseTemplate(content, args.orgName), undefined, "new_order_alert");
 }
 
 export async function sendExpiryAlert(args: SendExpiryAlertArgs) {
@@ -339,7 +444,7 @@ export async function sendExpiryAlert(args: SendExpiryAlertArgs) {
     <p style="margin:24px 0 0;font-size:13px;color:#666;">Entra a GestiOS para gestionar tu inventario.</p>
   `;
 
-  await sendEmail(args.to, `${args.products.length} producto(s) proximos a vencer — ${args.orgName}`, baseTemplate(content, args.orgName));
+  await sendEmail(args.to, `${args.products.length} producto(s) proximos a vencer — ${args.orgName}`, baseTemplate(content, args.orgName), undefined, "expiry_alert");
 }
 
 export async function sendInactiveCustomerEmail(args: SendInactiveCustomerArgs) {
@@ -353,11 +458,11 @@ export async function sendInactiveCustomerEmail(args: SendInactiveCustomerArgs) 
     <p style="margin:0;font-size:13px;color:#666;">Si necesitas ayuda, contacta directamente a ${args.orgName}.</p>
   `;
 
-  await sendEmail(args.to, `Te echamos de menos — ${args.orgName}`, baseTemplate(content, args.orgName), args.customerName);
+  await sendEmail(args.to, `Te echamos de menos — ${args.orgName}`, baseTemplate(content, args.orgName), args.customerName, "inactive_customer_email");
 }
 
 export async function sendPlainNotification(args: SendPlainArgs) {
-  await sendPlainEmail(args.to, args.subject, args.text);
+  await sendPlainEmail(args.to, args.subject, args.text, "plain_notification");
 }
 
 export async function sendPlanExpiryWarning(args: { to: string; orgName: string; daysLeft: number; planLabel: string }) {
@@ -371,7 +476,7 @@ export async function sendPlanExpiryWarning(args: { to: string; orgName: string;
     </div>
     <p style="margin:0;font-size:13px;color:#666;">Para renovar, contacta a soporte de GestiOS.</p>
   `;
-  await sendEmail(args.to, `Tu plan vence en ${args.daysLeft} dia${args.daysLeft !== 1 ? "s" : ""} — ${args.orgName}`, baseTemplate(content, args.orgName));
+  await sendEmail(args.to, `Tu plan vence en ${args.daysLeft} dia${args.daysLeft !== 1 ? "s" : ""} — ${args.orgName}`, baseTemplate(content, args.orgName), undefined, "plan_expiry_warning");
 }
 
 export async function sendPlanActivatedEmail(args: { to: string; orgName: string; plan: string; expiresAt: Date }) {
@@ -388,7 +493,7 @@ export async function sendPlanActivatedEmail(args: { to: string; orgName: string
     </div>
     <p style="margin:0;font-size:13px;color:#666;">Ya puedes acceder a todas las funciones de tu plan. Si tienes dudas, responde este correo.</p>
   `;
-  await sendEmail(args.to, `Plan ${label} activado — ${args.orgName}`, baseTemplate(content, "GestiOS"));
+  await sendEmail(args.to, `Plan ${label} activado — ${args.orgName}`, baseTemplate(content, "GestiOS"), undefined, "plan_activated");
 }
 
 export async function sendPlanExpired(args: { to: string; orgName: string; planLabel: string }) {
@@ -402,5 +507,5 @@ export async function sendPlanExpired(args: { to: string; orgName: string; planL
     </div>
     <p style="margin:0;font-size:13px;color:#666;">Para renovar, contacta a soporte de GestiOS de inmediato.</p>
   `;
-  await sendEmail(args.to, `Plan vencido — ${args.orgName} necesita renovacion`, baseTemplate(content, args.orgName));
+  await sendEmail(args.to, `Plan vencido — ${args.orgName} necesita renovacion`, baseTemplate(content, args.orgName), undefined, "plan_expired");
 }

@@ -384,6 +384,91 @@ Endpoints internos para Vercel Cron. No requieren sesión de usuario pero verifi
 
 ---
 
+## /api/webhooks/brevo
+
+### POST — tracking de eventos de email (delivery, bounce, spam)
+
+**Header requerido:** `x-brevo-webhook-key` con valor de `BREVO_WEBHOOK_KEY`
+
+**Body:**
+```json
+{
+  "event": "delivered|bounce|blocked|spam|error",
+  "email": "cliente@ejemplo.com",
+  "message-id": "<brevo-message-id>",
+  "date": "2026-05-11T12:00:00Z",
+  "reason": "mailbox full"  // solo para bounce/error
+}
+```
+
+Actualiza el `EmailLog` correspondiente con el nuevo status.
+
+---
+
+## /api/superadmin/email-stats
+
+### GET — métricas de email para SUPERADMIN
+
+**Query params:**
+- `from` / `to` — rango de fechas (default últimos 30 días)
+- `type` — filtro por tipo de email
+- `status` — filtro por status
+
+**Response:**
+```json
+{
+  "total": 1234,
+  "delivered": 1100,
+  "bounced": 50,
+  "failed": 84,
+  "byType": [{ "type": "order_confirmation", "count": 800 }],
+  "byStatus": [{ "status": "DELIVERED", "count": 1100 }],
+  "daily": [{ "date": "2026-05-11", "sent": 45, "delivered": 42 }]
+}
+```
+
+---
+
+## /api/addons/qr-bolivia
+
+### GET — retorna URL del QR subido por el merchant (para POS)
+
+**Response:**
+```json
+{
+  "qrImageUrl": "https://...supabase.co/storage/.../qr.png",
+  "active": true
+}
+```
+
+### POST — activa/desactiva el addon QR Bolivia
+
+**Body:**
+```json
+{
+  "active": true,
+  "hasNit": true,
+  "nit": "123456789"  // opcional si hasNit=false
+}
+```
+
+---
+
+## /api/addons/qr-bolivia/upload
+
+### POST — sube imagen QR personal (para merchants sin NIT)
+
+**Content-Type:** `multipart/form-data` con campo `file`
+
+**Response:**
+```json
+{
+  "url": "https://...supabase.co/storage/.../qr.png"
+}
+```
+
+---
+
 ## Códigos de error comunes
 
 | Status | Significado |

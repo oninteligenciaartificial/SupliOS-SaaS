@@ -59,6 +59,7 @@ Add-ons activos por org. `unique([organizationId, addon])`.
 | addon | AddonType |
 | active | Boolean |
 | stripeItemId | String? |
+| phoneNumberId | String? | Para WhatsApp: Meta phone_number_id. Para QR Bolivia: URL de imagen QR subida |
 
 ---
 
@@ -200,7 +201,8 @@ Organization
   ├── AuditLog[]
   ├── PaymentRequest[]
   ├── WaConversation[]
-  └── CashRegister[]
+  ├── CashRegister[]
+  └── EmailLog[]
 ```
 
 ## Migraciones
@@ -214,11 +216,38 @@ Agrega:
 - Tabla `product_variants` completa
 - `order_items.variantId`, `order_items.variantSnapshot`
 
+### `20260511181518_create_email_log`
+Agrega:
+- Tabla `email_logs` — tracking de emails enviados via Brevo
+- Índices para queries por org, status y tipo
+- **Aplicar manualmente a Supabase** (no via `migrate deploy`)
+
 ### `20260509120000_create_cash_registers`
 Agrega:
 - Tabla `cash_registers` — cierre diario de caja por organización/sucursal
 - Índices únicos parciales para garantizar un corte por día (con y sin `branchId`)
 - **Aplicado directamente a Supabase el 2026-05-09** (no via `migrate deploy`)
+
+### EmailLog (`email_logs`)
+
+Log de emails enviados via Brevo. Cada envío se registra antes de llamar la API.
+
+| Campo | Tipo | Notas |
+|---|---|---|
+| organizationId | String? | FK → Organization (nullable para emails del sistema) |
+| to | String | destinatario |
+| type | String | tipo de email (welcome_email, order_confirmation, etc.) |
+| subject | String | asunto del email |
+| status | String | SENT, DELIVERED, BOUNCED, FAILED |
+| brevoMessageId | String? | ID de mensaje de Brevo para tracking |
+| error | String? | mensaje de error si FAILED |
+| createdAt | DateTime | timestamp de envío |
+
+Índices: `(organizationId, createdAt)`, `(status, createdAt)`, `(type, createdAt)`
+
+**Webhook tracking:** `/api/webhooks/brevo` actualiza `status` a DELIVERED/BOUNCED según eventos de Brevo.
+
+---
 
 ### CashRegister (`cash_registers`)
 

@@ -77,6 +77,9 @@ Esto permite rastrear errores por usuario y organización en el dashboard de Sen
 - `app/api/cron/siat-cufd/route.ts` — errores de refresh CUFD
 - `app/api/qr-payments/webhook/route.ts` — errores de webhook QR
 - `lib/qr-bolivia.ts` — errores de webhook event handling
+- `lib/email.ts` — errores de envío de email (fire-and-forget)
+- `app/api/webhooks/brevo/route.ts` — errores de webhook Brevo
+- `app/api/addons/qr-bolivia/upload/route.ts` — errores de upload QR
 
 ## Alertas
 

@@ -76,6 +76,20 @@ export default function BillingPage() {
   const [showHistory, setShowHistory] = useState(false);
   const [showComparison, setShowComparison] = useState(false);
   const [cancelling, setCancelling] = useState<string | null>(null);
+  const [qrData, setQrData] = useState<{
+    qrPayload: string;
+    qrImageUrl?: string;
+    expiresAt: string;
+    qrPaymentId: string;
+    amountBOB: number;
+  } | null>(null);
+  const [qrStatus, setQrStatus] = useState<"pending" | "paid" | "expired" | "error">("pending");
+  const [generatingQr, setGeneratingQr] = useState(false);
+  const [qrAddonMode, setQrAddonMode] = useState<"nit" | "no-nit" | null>(null);
+  const [qrImageFile, setQrImageFile] = useState<File | null>(null);
+  const [qrImagePreview, setQrImagePreview] = useState<string | null>(null);
+  const [qrImageUploading, setQrImageUploading] = useState(false);
+  const [qrImageUploaded, setQrImageUploaded] = useState(false);
 
   const pricePerMonth = PLAN_PRICES_BOB[selectedPlan];
   const discount = MONTH_DISCOUNT[months] ?? 0;
@@ -107,10 +121,111 @@ export default function BillingPage() {
     setCancelling(null);
   }
 
+  async function generateQrPayment() {
+    setGeneratingQr(true);
+    setQrStatus("pending");
+    try {
+      const res = await fetch("/api/billing/qr", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ plan: selectedPlan, months }),
+      });
+      const data = await res.json();
+      if (res.ok && data.qrAvailable) {
+        setQrData({
+          qrPayload: data.qrPayload,
+          qrImageUrl: data.qrImageUrl,
+          expiresAt: data.expiresAt,
+          qrPaymentId: data.qrPaymentId,
+          amountBOB: data.amountBOB,
+        });
+        // Start polling for payment status
+        pollQrStatus(data.qrPaymentId);
+      } else {
+        setQrStatus("error");
+      }
+    } catch {
+      setQrStatus("error");
+    } finally {
+      setGeneratingQr(false);
+    }
+  }
+
+  async function pollQrStatus(qrPaymentId: string) {
+    const maxAttempts = 30; // 2.5 minutes max
+    let attempts = 0;
+
+    const poll = async () => {
+      if (attempts >= maxAttempts) {
+        setQrStatus("expired");
+        return;
+      }
+      attempts++;
+
+      try {
+        const res = await fetch(`/api/billing/qr?qrPaymentId=${qrPaymentId}`);
+        const data = await res.json();
+        if (data.status === "PAGADO") {
+          setQrStatus("paid");
+          // Refresh page after short delay
+          setTimeout(() => window.location.reload(), 2000);
+          return;
+        }
+        if (data.status === "EXPIRADO" || data.status === "CANCELADO") {
+          setQrStatus("expired");
+          return;
+        }
+      } catch {
+        // Continue polling
+      }
+
+      setTimeout(poll, 5000); // Poll every 5 seconds
+    };
+
+    poll();
+  }
+
   function copyNumber() {
     navigator.clipboard.writeText("1311455296");
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
+  }
+
+  function handleQrImageSelect(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (!file.type.startsWith("image/")) return;
+    if (file.size > 5 * 1024 * 1024) return; // 5MB max
+
+    setQrImageFile(file);
+    const reader = new FileReader();
+    reader.onload = () => setQrImagePreview(reader.result as string);
+    reader.readAsDataURL(file);
+  }
+
+  async function uploadQrImage() {
+    if (!qrImageFile) return;
+    setQrImageUploading(true);
+
+    const formData = new FormData();
+    formData.append("file", qrImageFile);
+    formData.append("type", "qr-bolivia");
+
+    try {
+      const res = await fetch("/api/addons/qr-bolivia/upload", {
+        method: "POST",
+        body: formData,
+      });
+
+      if (res.ok) {
+        setQrImageUploaded(true);
+        setQrAddonMode(null);
+      }
+    } catch {
+      // Error handled silently
+    } finally {
+      setQrImageUploading(false);
+    }
   }
 
   const pending = requests.find(r => r.status === "PENDIENTE");
@@ -249,7 +364,78 @@ export default function BillingPage() {
             <p className="text-xs text-brand-muted text-center">
               Se abrirá WhatsApp con un mensaje listo para enviar
             </p>
+
+            <div className="flex items-center gap-3 pt-2">
+              <div className="flex-1 h-px bg-white/10" />
+              <span className="text-xs text-brand-muted">o paga con QR</span>
+              <div className="flex-1 h-px bg-white/10" />
+            </div>
+
+            <button
+              onClick={generateQrPayment}
+              disabled={generatingQr}
+              className="w-full py-3 rounded-xl bg-gradient-to-br from-brand-kinetic-orange to-brand-kinetic-orange-light text-black font-bold flex items-center justify-center gap-2 transition-all shadow-[0_0_20px_rgba(255,107,0,0.3)] hover:shadow-[0_0_30px_rgba(255,107,0,0.5)] disabled:opacity-50"
+            >
+              <QrCode size={18} /> {generatingQr ? "Generando QR..." : `Pagar Bs. ${total.toLocaleString("es-BO")} con QR`}
+            </button>
           </div>
+
+          {/* QR Payment Status */}
+          {qrData && qrStatus === "pending" && (
+            <div className="glass-panel rounded-2xl p-5 space-y-4 text-center">
+              <h3 className="text-sm font-bold text-brand-muted uppercase tracking-wider">Escanea el QR para pagar</h3>
+              {qrData.qrImageUrl ? (
+                <img src={qrData.qrImageUrl} alt="QR de pago" className="w-48 h-48 mx-auto rounded-xl" />
+              ) : (
+                <div className="w-48 h-48 mx-auto rounded-xl bg-white/5 flex items-center justify-center">
+                  <QrCode size={48} className="text-brand-muted" />
+                </div>
+              )}
+              <p className="text-xs text-brand-muted">
+                Escanea con tu app bancaria. El plan se activará automáticamente al confirmar el pago.
+              </p>
+              <div className="flex items-center justify-center gap-2">
+                <div className="w-2 h-2 rounded-full bg-yellow-400 animate-pulse" />
+                <span className="text-xs text-yellow-400">Esperando pago...</span>
+              </div>
+            </div>
+          )}
+
+          {qrStatus === "paid" && (
+            <div className="glass-panel rounded-2xl p-5 text-center space-y-2">
+              <div className="w-12 h-12 rounded-full bg-green-500/15 flex items-center justify-center mx-auto">
+                <Check size={24} className="text-green-400" />
+              </div>
+              <h3 className="text-lg font-bold text-white">Pago confirmado!</h3>
+              <p className="text-sm text-brand-muted">Tu plan {PLAN_META[selectedPlan].label} fue activado. Recargando...</p>
+            </div>
+          )}
+
+          {qrStatus === "expired" && (
+            <div className="glass-panel rounded-2xl p-5 text-center space-y-2">
+              <div className="w-12 h-12 rounded-full bg-red-500/15 flex items-center justify-center mx-auto">
+                <X size={24} className="text-red-400" />
+              </div>
+              <h3 className="text-lg font-bold text-white">QR expirado</h3>
+              <p className="text-sm text-brand-muted">El tiempo de pago venció. Intenta nuevamente.</p>
+              <button onClick={() => { setQrData(null); setQrStatus("pending"); }} className="text-brand-kinetic-orange text-sm font-bold">
+                Generar nuevo QR
+              </button>
+            </div>
+          )}
+
+          {qrStatus === "error" && (
+            <div className="glass-panel rounded-2xl p-5 text-center space-y-2">
+              <div className="w-12 h-12 rounded-full bg-red-500/15 flex items-center justify-center mx-auto">
+                <X size={24} className="text-red-400" />
+              </div>
+              <h3 className="text-lg font-bold text-white">Error al generar QR</h3>
+              <p className="text-sm text-brand-muted">No se pudo generar el QR. Usa WhatsApp para coordinar el pago.</p>
+              <button onClick={() => setQrStatus("pending")} className="text-brand-kinetic-orange text-sm font-bold">
+                Intentar nuevamente
+              </button>
+            </div>
+          )}
         </div>
 
         {/* Tabla comparativa de planes */}
@@ -369,39 +555,151 @@ export default function BillingPage() {
           {ALL_ADDONS.map(addon => {
             const meta = ADDON_META[addon];
             const active = addons.some(a => a.addon === addon && a.active);
+            const isQrBolivia = addon === "QR_BOLIVIA";
+
             return (
-              <div key={addon} className="flex items-center justify-between py-3 gap-3">
-                <div className="flex items-center gap-3 min-w-0">
-                  <div className={`p-1.5 rounded-lg flex-shrink-0 ${active ? "bg-brand-kinetic-orange/15" : "bg-white/5"}`}>
-                    <Zap size={14} className={active ? "text-brand-kinetic-orange" : "text-brand-muted"} />
-                  </div>
-                  <div className="min-w-0">
-                    <div className="flex items-center gap-2 flex-wrap">
-                      <span className="text-white text-sm font-medium">{meta.label}</span>
-                      {meta.comingSoon && (
-                        <span className="px-1.5 py-0.5 rounded-full bg-white/10 text-white/40 text-[10px] font-bold">Próximamente</span>
-                      )}
+              <div key={addon} className="py-3 gap-3">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3 min-w-0">
+                    <div className={`p-1.5 rounded-lg flex-shrink-0 ${active ? "bg-brand-kinetic-orange/15" : "bg-white/5"}`}>
+                      <Zap size={14} className={active ? "text-brand-kinetic-orange" : "text-brand-muted"} />
                     </div>
-                    <span className="text-brand-kinetic-orange text-xs">{meta.price}</span>
+                    <div className="min-w-0">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <span className="text-white text-sm font-medium">{meta.label}</span>
+                        {meta.comingSoon && addon !== "QR_BOLIVIA" && (
+                          <span className="px-1.5 py-0.5 rounded-full bg-white/10 text-white/40 text-[10px] font-bold">Próximamente</span>
+                        )}
+                      </div>
+                      <span className="text-brand-kinetic-orange text-xs">{meta.price}</span>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2 flex-shrink-0">
+                    <span className={`flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-bold ${
+                      meta.comingSoon && addon !== "QR_BOLIVIA" ? "bg-white/5 text-white/25"
+                        : active ? "bg-green-500/15 text-green-400"
+                        : "bg-white/5 text-brand-muted"
+                    }`}>
+                      {meta.comingSoon && addon !== "QR_BOLIVIA" ? <><X size={11} /> Pronto</> : active ? <><Check size={11} /> Activo</> : <><X size={11} /> Inactivo</>}
+                    </span>
+                    {!meta.comingSoon && !active && addon !== "QR_BOLIVIA" && (
+                      <button
+                        onClick={() => window.open(`https://wa.me/${WA_NUMBER}?text=${encodeURIComponent(ADDON_WA_MSG[addon])}`, "_blank")}
+                        className="flex items-center gap-1 px-2.5 py-1 rounded-full bg-[#25D366]/10 border border-[#25D366]/20 text-[#25D366] text-xs font-bold hover:bg-[#25D366]/20 transition-all"
+                      >
+                        <MessageCircle size={11} /> Solicitar
+                      </button>
+                    )}
                   </div>
                 </div>
-                <div className="flex items-center gap-2 flex-shrink-0">
-                  <span className={`flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-bold ${
-                    meta.comingSoon ? "bg-white/5 text-white/25"
-                      : active ? "bg-green-500/15 text-green-400"
-                      : "bg-white/5 text-brand-muted"
-                  }`}>
-                    {meta.comingSoon ? <><X size={11} /> Pronto</> : active ? <><Check size={11} /> Activo</> : <><X size={11} /> Inactivo</>}
-                  </span>
-                  {!meta.comingSoon && !active && (
-                    <button
-                      onClick={() => window.open(`https://wa.me/${WA_NUMBER}?text=${encodeURIComponent(ADDON_WA_MSG[addon])}`, "_blank")}
-                      className="flex items-center gap-1 px-2.5 py-1 rounded-full bg-[#25D366]/10 border border-[#25D366]/20 text-[#25D366] text-xs font-bold hover:bg-[#25D366]/20 transition-all"
-                    >
-                      <MessageCircle size={11} /> Solicitar
-                    </button>
-                  )}
-                </div>
+
+                {/* QR Bolivia special flow */}
+                {isQrBolivia && !active && (
+                  <div className="mt-3 ml-10 space-y-3">
+                    {qrAddonMode === null && (
+                      <div className="space-y-2">
+                        <p className="text-xs text-brand-muted">¿Cómo querés recibir pagos QR de tus clientes?</p>
+                        <div className="flex flex-wrap gap-2">
+                          <button
+                            onClick={() => setQrAddonMode("nit")}
+                            className="px-4 py-2 rounded-xl border border-brand-kinetic-orange/30 bg-brand-kinetic-orange/10 text-brand-kinetic-orange text-xs font-bold hover:bg-brand-kinetic-orange/20 transition-all"
+                          >
+                            Tengo NIT
+                          </button>
+                          <button
+                            onClick={() => setQrAddonMode("no-nit")}
+                            className="px-4 py-2 rounded-xl border border-white/10 text-brand-muted text-xs font-bold hover:border-white/30 hover:text-white transition-all"
+                          >
+                            No tengo NIT
+                          </button>
+                        </div>
+                      </div>
+                    )}
+
+                    {qrAddonMode === "nit" && (
+                      <div className="bg-blue-500/10 border border-blue-500/20 rounded-xl p-4 space-y-2">
+                        <div className="flex items-start gap-3">
+                          <MessageCircle size={16} className="text-blue-400 flex-shrink-0 mt-0.5" />
+                          <div>
+                            <p className="text-sm text-white font-medium">QR Bolivia con NIT</p>
+                            <p className="text-xs text-brand-muted mt-1">
+                              Si tu negocio tiene NIT, podemos conectarte con los mejores proveedores de QR en Bolivia
+                              (QR Switch, Tigo Money, BiPago). Te guiamos en todo el proceso.
+                            </p>
+                            <button
+                              onClick={() => window.open(`https://wa.me/${WA_NUMBER}?text=${encodeURIComponent("Hola! Tengo NIT y quiero activar el addon de Pagos QR Bolivia en GestiOS. ¿Me pueden guiar con las opciones disponibles?")}`, "_blank")}
+                              className="mt-3 flex items-center gap-2 px-4 py-2 rounded-xl bg-[#25D366] text-white text-xs font-bold hover:bg-[#20b858] transition-all"
+                            >
+                              <MessageCircle size={12} /> Contactar Soporte
+                            </button>
+                          </div>
+                        </div>
+                        <button onClick={() => setQrAddonMode(null)} className="text-xs text-brand-muted hover:text-white transition-colors">
+                          ← Volver
+                        </button>
+                      </div>
+                    )}
+
+                    {qrAddonMode === "no-nit" && (
+                      <div className="bg-white/5 border border-white/10 rounded-xl p-4 space-y-3">
+                        <div className="flex items-start gap-3">
+                          <QrCode size={16} className="text-brand-kinetic-orange flex-shrink-0 mt-0.5" />
+                          <div>
+                            <p className="text-sm text-white font-medium">QR Personal (sin NIT)</p>
+                            <p className="text-xs text-brand-muted mt-1">
+                              Subí la imagen del QR de tu cuenta bancaria. Tus clientes lo verán en el POS para escanear y pagar.
+                            </p>
+                          </div>
+                        </div>
+
+                        {!qrImageUploaded && (
+                          <>
+                            <label className="block w-full border-2 border-dashed border-white/10 rounded-xl p-6 text-center cursor-pointer hover:border-brand-kinetic-orange/30 transition-colors">
+                              <input
+                                type="file"
+                                accept="image/*"
+                                onChange={handleQrImageSelect}
+                                className="hidden"
+                              />
+                              {qrImagePreview ? (
+                                <div className="space-y-2">
+                                  <img src={qrImagePreview} alt="QR preview" className="w-32 h-32 mx-auto rounded-lg object-contain bg-white p-2" />
+                                  <p className="text-xs text-brand-muted">Cambiar imagen</p>
+                                </div>
+                              ) : (
+                                <div className="space-y-2">
+                                  <QrCode size={32} className="mx-auto text-brand-muted" />
+                                  <p className="text-xs text-brand-muted">Click para subir tu QR</p>
+                                  <p className="text-[10px] text-white/30">PNG, JPG — máx 5MB</p>
+                                </div>
+                              )}
+                            </label>
+
+                            {qrImageFile && (
+                              <button
+                                onClick={uploadQrImage}
+                                disabled={qrImageUploading}
+                                className="w-full py-2.5 rounded-xl bg-gradient-to-br from-brand-kinetic-orange to-brand-kinetic-orange-light text-black font-bold text-sm disabled:opacity-50"
+                              >
+                                {qrImageUploading ? "Subiendo..." : "Guardar QR"}
+                              </button>
+                            )}
+                          </>
+                        )}
+
+                        {qrImageUploaded && (
+                          <div className="flex items-center gap-2 text-brand-growth-neon text-sm">
+                            <Check size={14} /> QR guardado correctamente
+                          </div>
+                        )}
+
+                        <button onClick={() => { setQrAddonMode(null); setQrImageFile(null); setQrImagePreview(null); }} className="text-xs text-brand-muted hover:text-white transition-colors">
+                          ← Volver
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                )}
               </div>
             );
           })}

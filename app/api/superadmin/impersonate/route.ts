@@ -8,7 +8,7 @@ export async function POST(request: Request) {
   const admin = await getSuperAdmin();
   if (!admin) return NextResponse.json({ error: "Sin permiso" }, { status: 403 });
 
-  const rateLimited = checkRateLimit(request, "superadmin-impersonate", { windowMs: 60_000, max: 10 });
+  const rateLimited = await checkRateLimit(request, "superadmin-impersonate", { windowMs: 60_000, max: 10 });
   if (rateLimited) return rateLimited;
 
   let body: unknown;

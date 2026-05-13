@@ -1,11 +1,32 @@
 # Emails Automáticos
 
 Proveedor: **Brevo API** (`BREVO_API_KEY`).  
-Remitente: configurable con `EMAIL_FROM_ADDRESS` — actualmente `oninteligenciaartificial@gmail.com` (temporal).  
+Remitente: configurable con `BREVO_SENDER_EMAIL` — actualmente `oninteligenciaartificial@gmail.com` (temporal).  
 Template: HTML con diseño dark, fondo `#0a0a0a`, acento naranja `#ff6b00`.  
 Todos los envíos son fire-and-forget (`.catch(() => {})`).
 
-> **Pendiente:** verificar dominio propio para usar `noreply@gestios.app`. Ver `docs/BREVO-SETUP.md`.
+## Sistema de logging
+
+Cada email enviado se registra en la tabla `EmailLog` (Prisma):
+- `id`, `organizationId`, `to`, `type`, `subject`, `status`, `brevoMessageId`, `error`, `createdAt`
+- Status inicial: `SENT`
+- Webhook `/api/webhooks/brevo` actualiza a `DELIVERED`, `BOUNCED`, `FAILED`
+- Dashboard métricas: `/email-stats` (SUPERADMIN)
+
+## Rate limiting
+
+- **Límite diario:** 280 emails (buffer de 20 sobre el límite de Brevo de 300)
+- **Contador:** Upstash Redis con fallback in-memory
+- **Reset:** Automático a medianoche UTC
+
+## Webhook tracking
+
+- **Endpoint:** `POST /api/webhooks/brevo`
+- **Verificación:** Header `x-brevo-webhook-key` con `BREVO_WEBHOOK_KEY`
+- **Eventos:** delivered, bounce, blocked, spam
+- **n8n bridge:** Para plan gratuito de Brevo (sin webhooks nativos), usar `n8n/brevo-email-tracking.json`
+
+> **Pendiente:** verificar dominio propio para usar `noreply@gestios.app`. Ver `docs/BREVO-SETUP.md` y `docs/EMAIL-MIGRATION-GUIDE.md`.
 
 ---
 

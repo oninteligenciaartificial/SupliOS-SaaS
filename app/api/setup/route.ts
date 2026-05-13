@@ -11,7 +11,7 @@ const schema = z.object({
 });
 
 export async function POST(request: Request) {
-  const rateLimited = checkRateLimit(request, "setup", RATE_LIMITS.setup);
+  const rateLimited = await checkRateLimit(request, "setup", RATE_LIMITS.setup);
   if (rateLimited) return rateLimited;
 
   const supabase = await createClient();

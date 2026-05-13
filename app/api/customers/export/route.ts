@@ -11,7 +11,7 @@ export async function GET(request: Request) {
     return NextResponse.json(planGateError("csv_export"), { status: 403 });
   }
 
-  const rateLimited = checkOrgRateLimit(profile.organizationId, "customers-export", RATE_LIMITS.export);
+  const rateLimited = await checkOrgRateLimit(profile.organizationId, "customers-export", RATE_LIMITS.export);
   if (rateLimited) return rateLimited;
 
   const customers = await prisma.customer.findMany({

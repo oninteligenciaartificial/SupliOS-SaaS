@@ -1,6 +1,6 @@
 # Análisis técnico completo — GestiOS
 
-Generado: 2026-04-29. Basado en lectura directa del código y ejecución de herramientas.
+Generado: 2026-04-29. Actualizado: 2026-05-11. Basado en lectura directa del código y ejecución de herramientas.
 
 ---
 
@@ -9,11 +9,12 @@ Generado: 2026-04-29. Basado en lectura directa del código y ejecución de herr
 | Check | Estado |
 |---|---|
 | TypeScript (`tsc --noEmit`) | ✅ Sin errores |
-| Tests (Vitest) | ✅ 5/5 pasando |
+| Tests (Vitest) | ✅ 229/229 pasando |
 | Build Next.js | ❌ Falla localmente — esperado (sin `.env` local, la DB vive en Supabase) |
 | `console.log` en producción | ✅ Ninguno |
 | TODOs/FIXMEs en código | ✅ Ninguno |
 | Secrets hardcodeados | ✅ Ninguno detectado |
+| RLS en Supabase | ✅ Habilitado en `public.profiles` |
 
 ---
 
@@ -146,8 +147,8 @@ Estas rutas no usan `getTenantProfile` por diseño:
 ### Completamente implementado ✅
 - Auth (Supabase) + multi-tenancy
 - Dashboard (KPIs, stock alerts)
-- POS + variantes + carrito + canje de loyalty points
-- Inventario + variantes por tipo de negocio
+- POS + variantes + carrito + canje de loyalty points + QR personal
+- Inventario + variantes por tipo de negocio + imagen de producto
 - Pedidos (CRUD, estados, email, transacciones atómicas)
 - Clientes (CRM, búsqueda, loyalty acumulación)
 - Categorías / Proveedores / Descuentos / Sucursales
@@ -155,30 +156,33 @@ Estas rutas no usan `getTenantProfile` por diseño:
 - Configuración org, tipo de negocio, moneda
 - Facturación (planes, add-ons)
 - Equipo (staff management)
-- Emails (12 tipos via Brevo)
-- Cron jobs (cumpleaños, vencimiento, inactivos, plan)
-- Pagos QR + aprobación superadmin
+- Emails (12 tipos via Brevo con logging, rate limiting, webhook)
+- Cron jobs (cumpleaños, vencimiento, inactivos, plan, stock bajo)
+- Pagos QR + aprobación superadmin + upload QR personal
 - Registro público `/registro/[slug]` (plan PRO+)
-- Panel superadmin
+- Panel superadmin + métricas de email
 - WhatsApp backend + webhook multi-tenant
 - Audit log backend (`lib/audit.ts`) + UI `/audit`
-- Rate limiting en `/api/registro`
-- Error monitoring (`lib/monitoring.ts` + `reportAsyncError`)
+- Rate limiting distribuido (Upstash Redis + in-memory fallback)
+- Error monitoring (Sentry + `reportAsyncError`)
+- Sidebar dinámico por tipo de negocio
+- Plan gating completo (variantes CRECER+, tienda PRO+, etc.)
+- RLS habilitado en `public.profiles`
 
 ### Modelo en DB, sin backend/UI ❌
 | Feature | DB | Backend | UI |
 |---|---|---|---|
-| Foto de producto | ✅ `imageUrl` | ❌ sin upload | ❌ |
-| Barcode scanner en POS | ✅ `barcode` | — | ❌ |
-| Filtro por sucursal en reportes | ✅ `branchId` | ❌ | ❌ |
+| Foto de producto | ✅ `imageUrl` | ✅ `POST /api/products/upload-image` | ✅ Upload con preview |
+| Barcode scanner en POS | ✅ `barcode` | — | ✅ Input de escaneo |
+| Filtro por sucursal en reportes | ✅ `branchId` | ✅ param `branchId` | ✅ Selector en UI |
 
 ### Add-ons pendientes (comingSoon: true)
 | Add-on | Estado |
 |---|---|
 | WhatsApp Business | ✅ Backend listo — falta config Vercel + Meta |
-| Facturación SIAT Bolivia | ❌ Sin implementar |
-| Pagos QR Bolivia (PSP) | ❌ Sin implementar |
-| E-commerce storefront | ❌ Sin implementar |
+| Facturación SIAT Bolivia | ⚠️ Scaffold completo — requiere intermediario |
+| Pagos QR Bolivia (PSP) | ⚠️ Upload personal implementado — PSP pendiente |
+| E-commerce storefront | ✅ Implementado — `/{slug}/tienda` |
 
 ---
 
@@ -186,12 +190,13 @@ Estas rutas no usan `getTenantProfile` por diseño:
 
 | Item | Estado |
 |---|---|
-| Cron jobs en Vercel (`vercel.json`) | ✅ |
-| Rate limiting en registro | ✅ |
+| Cron jobs en Vercel (`vercel.json`) | ✅ 7 jobs |
+| Rate limiting | ✅ Upstash Redis + in-memory fallback |
 | Transacciones atómicas en órdenes | ✅ |
-| Error monitoring (`reportAsyncError`) | ✅ fase 1 |
-| Tests (Vitest) | ⚠️ 5 tests, solo rate-limit |
-| Sentry | ⚠️ fallback automático si se instala `@sentry/nextjs` |
+| Error monitoring | ✅ Sentry activo en producción |
+| Tests (Vitest) | ✅ 229 tests, 12 files |
+| RLS en Supabase | ✅ Habilitado en `public.profiles` |
+| Email logging | ✅ `EmailLog` table + webhook tracking |
 
 ---
 

@@ -1,11 +1,16 @@
 # Estado Técnico del Proyecto
 
-Análisis al 2026-05-06. Basado en lectura directa del código y ejecución de herramientas.
+Análisis al 2026-05-11. Basado en lectura directa del código y ejecución de herramientas.
 Ver análisis detallado en `docs/ANALYSIS.md`. Ver plan de trabajo en `docs/PLAN.md`.
 
-**Últimas actualizaciones (2026-05-06):**
-- ✅ Rate limiting mejorado: cleanup automático + 6 endpoints protegidos
-- ✅ Plan de trabajo completo documentado en `docs/PLAN.md`
+**Últimas actualizaciones (2026-05-11):**
+- ✅ Email system completo: Brevo con logging, rate limiting, dashboard métricas
+- ✅ QR Bolivia addon: upload de QR personal para merchants sin NIT
+- ✅ RLS habilitado en `public.profiles` (Supabase lint 0013 fix)
+- ✅ Webhook Brevo: `/api/webhooks/brevo` para tracking delivery/bounce
+- ✅ n8n workflow: bridge Brevo → GestiOS para plan gratuito
+- ✅ Tests: 229 pasando (18 nuevos de email)
+- ✅ Vercel env vars: `BREVO_SENDER_EMAIL`, `BREVO_SENDER_NAME`, `BREVO_WEBHOOK_KEY` configurados
 
 ---
 
@@ -97,8 +102,13 @@ Solo falta configurar en Vercel:
 ### Facturación SIAT Bolivia
 Integración con el SIN Bolivia. Requiere investigar intermediario (Nube Fiscal, FacturAPI) o API directa del SIN.
 
-### Pagos QR Bolivia
-Integrar con PSP boliviano: Tigo Money, BiPago, o QR SWITCH del BCB.
+### Pagos QR Bolivia ✅ Upload personal implementado — requiere PSP para QR automático
+Dos modos:
+1. **Con NIT:** QR oficial via PSP (Kuapay, PaymentsGateway.bo) — requiere contratar proveedor
+2. **Sin NIT:** Merchant sube imagen QR personal (banco/Tigo/BiPago) — **implementado**
+   - Upload en `/billing` → Supabase Storage (`org-assets` bucket)
+   - QR se muestra en POS checkout via `ManualQrModal`
+   - API: `GET /api/addons/qr-bolivia` para POS, `POST /api/addons/qr-bolivia/upload` para upload
 
 ### E-commerce
 Storefront público en `/{slug}/tienda`. La DB ya soporta productos con variantes y precios.
@@ -107,7 +117,7 @@ Storefront público en `/{slug}/tienda`. La DB ya soporta productos con variante
 
 ## Infraestructura
 
-- [x] **Tests** — 209 tests passing. 11 test files: `rate-limit.test.ts`, `monitoring.test.ts`, `plans.test.ts`, `plans-addons.test.ts`, `permissions.test.ts`, `currency.test.ts`, `staff.test.ts`, `orders-logic.test.ts`, `products-customers.test.ts`, `audit.test.ts`, `tienda-security.test.ts`.
+- [x] **Tests** — 229 tests passing. 12 test files: `rate-limit.test.ts`, `monitoring.test.ts`, `plans.test.ts`, `plans-addons.test.ts`, `permissions.test.ts`, `currency.test.ts`, `staff.test.ts`, `orders-logic.test.ts`, `products-customers.test.ts`, `audit.test.ts`, `tienda-security.test.ts`, `email.test.ts`.
 - [x] **Cron jobs en Vercel** — confirmado en `vercel.json` (7 jobs).
 - [x] **Rate limiting** — aplicado en 7 endpoints: `/api/setup`, `/api/team`, `/api/payments`, `/api/products`, `/api/orders`, `/api/registro`, `/api/tienda/checkout`. Cleanup automático cada 60s.
 - [x] **Transacciones atómicas en órdenes** — `prisma.$transaction([create, ...decrements])`.
@@ -137,11 +147,14 @@ Storefront público en `/{slug}/tienda`. La DB ya soporta productos con variante
 9. ✅ Facturación SIAT Bolivia — scaffold completo (schema, lib, API, cron). Requiere NIT del cliente + intermediario (FacturAPI Bolivia recomendado). Ver `docs/SIAT-BOLIVIA.md`
 10. ✅ Pagos QR Bolivia — scaffold completo (schema, lib, API, cron). Requiere PSP externo + env vars. Ver `docs/QR-BOLIVIA.md`
 11. ✅ E-commerce storefront — `/{slug}/tienda` catálogo público + carrito + checkout (2026-04-29)
-12. ✅ Emails automáticos — Brevo configurado, 12 tipos de email, 5 cron jobs (2026-04-30)
-    - Remitente temporal: `oninteligenciaartificial@gmail.com` (verificado en Brevo)
+12. ✅ Emails automáticos — Brevo configurado, 12 tipos de email, logging en DB, rate limiting 280/día (2026-05-11)
+    - Remitente: `oninteligenciaartificial@gmail.com` (verificado en Brevo)
+    - Logging: cada envío registra en `EmailLog` table
+    - Webhook: `/api/webhooks/brevo` para tracking delivery/bounce
+    - Dashboard: `/email-stats` para SUPERADMIN
+    - n8n: `n8n/brevo-email-tracking.json` bridge para plan gratuito
     - Pendiente: dominio propio para usar `noreply@gestios.app`
-    - Cron stock bajo: `GET /api/cron/low-stock` diario 08:30 (CRECER+)
-    - Ver: `docs/BREVO-SETUP.md` y `docs/EMAILS.md`
+    - Ver: `docs/BREVO-SETUP.md`, `docs/EMAILS.md`, `docs/EMAIL-MIGRATION-GUIDE.md`
     - GET `/api/tienda/[slug]`: org info + productos activos (gate: plan PRO+)
     - POST `/api/tienda/checkout`: pedido público con stock decrement, email confirmación opcional
     - UI: catálogo grid, carrito drawer, picker de variantes, formulario checkout

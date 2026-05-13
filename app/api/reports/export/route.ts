@@ -8,7 +8,7 @@ export async function GET(request: Request) {
   const profile = await getTenantProfile();
   if (!profile) return NextResponse.json({ error: "No autorizado" }, { status: 401 });
 
-  const rateLimited = checkOrgRateLimit(profile.organizationId, "reports-export", RATE_LIMITS.export);
+  const rateLimited = await checkOrgRateLimit(profile.organizationId, "reports-export", RATE_LIMITS.export);
   if (rateLimited) return rateLimited;
 
   const activeAddons = await prisma.orgAddon.findMany({

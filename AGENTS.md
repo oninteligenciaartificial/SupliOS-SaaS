@@ -6,14 +6,18 @@ This version has breaking changes — APIs, conventions, and file structure may 
 
 ## Stack
 
-Next.js 16.2.3 + React 19 + Prisma 7 + Supabase Auth + Tailwind 4 + Zod 4 + Vitest 4
+Next.js 16.2.3 + React 19 + Prisma 7 + Supabase Auth + Tailwind 4 + Zod 4 + Vitest 4 + Sentry
+
+## Path alias
+
+`@/*` → root (`tsconfig.json` + `vitest.config.ts`). Example: `import { prisma } from "@/lib/prisma"`.
 
 ## Commands
 
 ```
 npm run dev          # dev server
 npm run build        # prisma generate + next build (NO db push)
-npm test             # vitest run (all tests)
+npm test             # vitest run (tests/**/*.test.ts)
 npm test:watch       # vitest watch mode
 npm run lint         # eslint
 npx tsc --noEmit     # typecheck (not in scripts, but works)
@@ -42,9 +46,19 @@ El modelo `Profile` NO tiene estas columnas en la DB real:
 
 **NO los agregues de vuelta** sin migración previa.
 
+### Modelo EmailLog — tracking de emails
+
+`EmailLog` registra cada email enviado via Brevo. Campos: `id`, `organizationId`, `to`, `type`, `subject`, `status` (SENT/DELIVERED/BOUNCED/FAILED), `brevoMessageId`, `error`, `createdAt`. Webhook en `/api/webhooks/brevo` actualiza status.
+
 ### Modelo Category — campo businessType
 
 `Category` tiene `businessType String @default("GENERAL")`. Las categorías se filtran por este campo en la UI pero persisten en la DB. API: `GET /api/categories?all=1` para ver todas.
+
+### Modelo OrgAddon — campo phoneNumberId
+
+`OrgAddon.phoneNumberId` se usa para dos propósitos:
+- WhatsApp: Meta `phone_number_id` para routing multi-tenant
+- QR Bolivia: URL de imagen QR subida a Supabase Storage (para merchants sin NIT)
 
 ### Lazy Prisma initialization
 
@@ -52,11 +66,15 @@ El modelo `Profile` NO tiene estas columnas en la DB real:
 
 ### Todos los queries deben filtrar por `organizationId`
 
-No hay RLS en Supabase. El aislamiento multi-tenant es a nivel de aplicación. Usá `getTenantProfile()` de `lib/auth.ts` — devuelve `{ organizationId, plan, businessType, role }`.
+RLS está habilitado solo en `public.profiles` con políticas de acceso propio. El resto del aislamiento multi-tenant es a nivel de aplicación. Usá `getTenantProfile()` de `lib/auth.ts` — devuelve `{ organizationId, plan, businessType, role }`.
 
 ### Emails fire-and-forget
 
 Siempre `.catch(() => {})` en envíos de email. Nunca bloquear la respuesta.
+
+### WhatsApp multi-tenant
+
+`lib/whatsapp.ts` rutea por `OrgAddon.phoneNumberId`. Si el org tiene addon WHATSAPP activo con `phoneNumberId`, usa ese número. Sino fallback a `WA_PHONE_NUMBER_ID` env var. El webhook en `app/api/webhooks/whatsapp/route.ts` ya rutea entrantes por `phone_number_id` del metadata.
 
 ### Zod `z.record()` requiere 2 argumentos
 
@@ -102,10 +120,32 @@ El sidebar en `app/(dashboard)/layout.tsx` usa `getBusinessUI(businessType)` par
 | `SUPABASE_SERVICE_ROLE_KEY` | Supabase → Settings → API → service_role |
 | `DATABASE_URL` | Supabase → Settings → Database → Connection string (Transaction) |
 
+## Upstash Redis — rate limiter distribuido
+
+`lib/rate-limit.ts` usa `@upstash/redis` para rate limiting compartido entre instancias serverless. Sin las vars, hace fallback a in-memory.
+
+| Variable | Dónde |
+|---|---|
+| `UPSTASH_REDIS_REST_URL` | Upstash Console → tu base de datos → REST API URL |
+| `UPSTASH_REDIS_REST_TOKEN` | Upstash Console → tu base de datos → REST API Token |
+
+Crear base gratis en https://upstash.com
+
 ## Cron jobs (vercel.json)
 
 7 crons diarios: birthday, expiry, inactive-customers, plan-expiry, low-stock, siat-cufd, expire-qr.
 
-## Known TODOs
+## Tests
 
-- SIAT Bolivia, QR Bolivia, WhatsApp — requieren credenciales externas no configuradas
+Tests live in `tests/` (not `__tests__/`). Pattern: `tests/**/*.test.ts`. Vitest env = `node`. All tests mock Prisma — no real DB needed.
+
+## Monitoring
+
+`@sentry/nextjs` configured with `withSentryConfig`. Errors auto-tracked. User context set via `setSentryUser()` in `lib/auth.ts`.
+
+## Domain
+
+- **Moneda:** BOB (Bolivian Boliviano). Todos los precios en `lib/plans.ts` están en BOB.
+- **SIAT Bolivia:** Facturación electrónica — requiere NIT, CUIS, CUFD del SIN. Credenciales no configuradas en dev.
+- **QR Bolivia:** Pagos vía QR bancario/Tigo/BiPago. Proveedor externo no configurado en dev.
+- **WhatsApp:** Business API — requiere Meta credentials no configuradas en dev.

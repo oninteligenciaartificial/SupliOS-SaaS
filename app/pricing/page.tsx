@@ -1,11 +1,11 @@
-import { Check, X } from "lucide-react";
+import { Check, X, QrCode, MessageCircle } from "lucide-react";
 import Link from "next/link";
 
 const PLANS = [
   {
     name: "Básico",
-    price: "$39",
-    priceBOB: "Bs. 350",
+    priceBOB: "350",
+    priceUSD: "~$50",
     period: "/mes",
     color: "text-white",
     border: "border-white/10",
@@ -20,6 +20,7 @@ const PLANS = [
       { label: "Reportes de ventas", included: false },
       { label: "Gestión de proveedores", included: false },
       { label: "CSV import/export", included: false },
+      { label: "Variantes de productos", included: false },
       { label: "Registro público de clientes", included: false },
       { label: "Emails automáticos", included: false },
       { label: "Sucursales múltiples", included: false },
@@ -28,8 +29,8 @@ const PLANS = [
   },
   {
     name: "Crecer",
-    price: "$59",
-    priceBOB: "Bs. 530",
+    priceBOB: "530",
+    priceUSD: "~$76",
     period: "/mes",
     color: "text-blue-300",
     border: "border-blue-400/30",
@@ -37,10 +38,12 @@ const PLANS = [
     limits: "500 productos · 300 clientes · 3 usuarios",
     features: [
       { label: "Todo lo del plan Básico", included: true },
+      { label: "Variantes de productos", included: true },
       { label: "Descuentos ilimitados", included: true },
       { label: "Reportes de ventas", included: true },
       { label: "Gestión de proveedores", included: true },
       { label: "CSV import/export", included: true },
+      { label: "Vencimientos (Farmacia/Suplementos)", included: true },
       { label: "Add-ons opcionales", included: true },
       { label: "Registro público de clientes", included: false },
       { label: "Emails automáticos", included: false },
@@ -50,8 +53,8 @@ const PLANS = [
   },
   {
     name: "Pro",
-    price: "$89",
-    priceBOB: "Bs. 800",
+    priceBOB: "800",
+    priceUSD: "~$114",
     period: "/mes",
     color: "text-blue-400",
     border: "border-blue-500/30",
@@ -60,8 +63,11 @@ const PLANS = [
     features: [
       { label: "Todo lo del plan Crecer", included: true },
       { label: "Productos y clientes ilimitados", included: true },
+      { label: "Tienda Online", included: true },
+      { label: "Pagos QR Bolivia", included: true },
       { label: "Registro público de clientes", included: true },
       { label: "Emails básicos automáticos", included: true },
+      { label: "Garantías (Electrónica)", included: true },
       { label: "Sucursales múltiples", included: false },
       { label: "Roles avanzados", included: false },
       { label: "Auditoría completa", included: false },
@@ -69,8 +75,8 @@ const PLANS = [
   },
   {
     name: "Empresarial",
-    price: "$139",
-    priceBOB: "Bs. 1.250",
+    priceBOB: "1.250",
+    priceUSD: "~$179",
     period: "/mes",
     color: "text-brand-kinetic-orange",
     border: "border-brand-kinetic-orange/40",
@@ -82,6 +88,8 @@ const PLANS = [
       { label: "Roles y permisos avanzados", included: true },
       { label: "Emails avanzados (cumpleaños, inactividad)", included: true },
       { label: "Historial de auditoría", included: true },
+      { label: "Facturación SIAT Bolivia", included: true },
+      { label: "Exportación contable", included: true },
       { label: "Soporte prioritario <6h", included: true },
     ],
   },
@@ -89,10 +97,10 @@ const PLANS = [
 
 const ADDONS = [
   { name: "WhatsApp Business",    price: "$40/mes", desc: "300 conversaciones incluidas, excedente $0.08 c/u" },
-  { name: "Facturación SIAT",     price: "$25/mes", desc: "Facturas electrónicas según el SIN Bolivia (próximamente)" },
-  { name: "Pagos QR Bolivia",     price: "$15/mes", desc: "QR bancario, Tigo Money y BiPago" },
-  { name: "E-commerce",           price: "$20/mes", desc: "Conecta Shopify o WooCommerce" },
-  { name: "Exportación Contable", price: "$18/mes", desc: "CSV/Excel de ventas para tu contador local" },
+  { name: "Facturación SIAT",     price: "$25/mes", desc: "Facturas electrónicas según el SIN Bolivia (incluido en Empresarial)" },
+  { name: "Pagos QR Bolivia",     price: "$15/mes", desc: "QR bancario, Tigo Money y BiPago (incluido en Pro+)" },
+  { name: "E-commerce",           price: "$20/mes", desc: "Tienda online sincronizada con inventario (incluido en Pro)" },
+  { name: "Exportación Contable", price: "$18/mes", desc: "CSV/Excel de ventas para tu contador local (incluido en Empresarial)" },
 ];
 
 export default function PricingPage() {
@@ -145,10 +153,10 @@ export default function PricingPage() {
               <div>
                 <div className={`text-sm font-bold mb-1 ${plan.color}`}>{plan.name}</div>
                 <div className="flex items-end gap-1">
-                  <span className="text-3xl font-display font-bold text-white">{plan.price}</span>
+                  <span className="text-3xl font-display font-bold text-white">Bs. {plan.priceBOB}</span>
                   <span className="text-brand-muted text-sm mb-1">{plan.period}</span>
                 </div>
-                <div className="text-brand-muted text-xs mt-0.5">{plan.priceBOB}/mes</div>
+                <div className="text-brand-muted text-xs mt-0.5">{plan.priceUSD}/mes</div>
                 <p className="text-xs text-brand-muted mt-2 leading-relaxed">{plan.limits}</p>
               </div>
 

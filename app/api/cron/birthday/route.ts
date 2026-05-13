@@ -17,7 +17,7 @@ function verifyCronSecret(provided: string | null): boolean {
 }
 
 export async function GET(request: Request) {
-  const rateLimited = checkRateLimit(request, "cron-birthday", RATE_LIMITS.cron);
+  const rateLimited = await checkRateLimit(request, "cron-birthday", RATE_LIMITS.cron);
   if (rateLimited) return rateLimited;
 
   const authHeader = request.headers.get("Authorization");

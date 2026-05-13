@@ -146,17 +146,17 @@ describe("V-07 — magic bytes MIME detection", () => {
 
 describe("Rate limiting", () => {
   describe("consumeRateLimit", () => {
-    it("allows first request", () => {
+    it("allows first request", async () => {
       const key = `test-rl-${Date.now()}`;
-      const result = consumeRateLimit(key, { windowMs: 60_000, max: 5 });
+      const result = await consumeRateLimit(key, { windowMs: 60_000, max: 5 });
       expect(result.allowed).toBe(true);
       expect(result.remaining).toBe(4);
     });
 
-    it("blocks when limit exceeded", () => {
+    it("blocks when limit exceeded", async () => {
       const key = `test-rl-block-${Date.now()}`;
-      for (let i = 0; i < 5; i++) consumeRateLimit(key, { windowMs: 60_000, max: 5 });
-      const result = consumeRateLimit(key, { windowMs: 60_000, max: 5 });
+      for (let i = 0; i < 5; i++) await consumeRateLimit(key, { windowMs: 60_000, max: 5 });
+      const result = await consumeRateLimit(key, { windowMs: 60_000, max: 5 });
       expect(result.allowed).toBe(false);
       expect(result.remaining).toBe(0);
     });

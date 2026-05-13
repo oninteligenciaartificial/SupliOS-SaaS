@@ -64,7 +64,7 @@ export async function POST(request: Request) {
 
   const { phone, message } = result.data;
 
-  const waResult = await sendWhatsAppText({ to: phone, text: message });
+  const waResult = await sendWhatsAppText({ to: phone, text: message, organizationId: orgId });
   if (!waResult.success) {
     return NextResponse.json({ error: waResult.error ?? "Error al enviar mensaje" }, { status: 502 });
   }

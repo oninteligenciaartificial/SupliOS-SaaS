@@ -43,7 +43,7 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Tienda no disponible" }, { status: 403 });
 
   const ip = getRequestIp(new Headers(request.headers));
-  const rateLimit = consumeRateLimit(`tienda:${ip}`, { windowMs: 60_000, max: 30 });
+  const rateLimit = await consumeRateLimit(`tienda:${ip}`, { windowMs: 60_000, max: 30 });
   if (!rateLimit.allowed) {
     return NextResponse.json(
       { error: "Demasiadas solicitudes. Intenta nuevamente en unos minutos." },

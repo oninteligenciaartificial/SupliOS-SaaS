@@ -81,6 +81,7 @@
 | No mass assignment | ✅ Zod schemas whitelist allowed fields |
 | No client-side role/permissions from request | ✅ Verified (role read from server-side profile) |
 | Superadmin impersonation scoped | ✅ Cookie-based, only works for SUPERADMIN role |
+| RLS enabled on exposed tables | ✅ `public.profiles` has RLS + policies (2026-05-11) |
 
 ### BLOCK 4 — Injection
 | Item | Status |
@@ -160,6 +161,7 @@
 | Audit logging (EMPRESARIAL plan) | ✅ logAudit() for create/update/delete operations |
 | Sentry error tracking | ✅ @sentry/nextjs integrated |
 | Fire-and-forget email errors | ✅ All emails .catch(() => reportAsyncError()) |
+| Email logging | ✅ EmailLog table tracks all sends + webhook status |
 | ⚠️ Automated alerts for attacks | ❌ Pending (Sentry alerts not configured) |
 | ⚠️ Structured JSON logging | ⚠️ Partial (console.error used, not JSON structured) |
 | No secrets in logs | ✅ Verified |
@@ -215,6 +217,9 @@
 | `BREVO_API_KEY` | Email sending | ❌ Optional |
 | `BREVO_SENDER_EMAIL` | Email sender address | ❌ Optional |
 | `BREVO_SENDER_NAME` | Email sender name | ❌ Optional |
+| `BREVO_WEBHOOK_KEY` | Webhook verification | ❌ Optional |
+| `UPSTASH_REDIS_REST_URL` | Distributed rate limiting | ❌ Optional |
+| `UPSTASH_REDIS_REST_TOKEN` | Distributed rate limiting | ❌ Optional |
 
 ---
 

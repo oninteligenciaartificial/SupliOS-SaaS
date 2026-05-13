@@ -5,6 +5,7 @@ import { getBusinessUI } from "@/lib/business-ui";
 import type { BusinessType } from "@/lib/business-types";
 import { Search, Plus, Minus, Trash2, ShoppingCart, CheckCircle, X, Tag, ChevronUp, Layers, Star, Barcode, QrCode, Banknote, CreditCard, Landmark } from "lucide-react";
 import { QrPaymentModal } from "./QrPaymentModal";
+import { ManualQrModal } from "./ManualQrModal";
 import { canUseFeature, canUseAddon } from "@/lib/plans";
 import type { PlanType, AddonType } from "@/lib/plans";
 
@@ -87,11 +88,18 @@ export default function POSPage() {
   const [activeAddons, setActiveAddons] = useState<AddonType[]>([]);
   const [orgPlan, setOrgPlan] = useState<PlanType>("BASICO");
   const [qrOrderId, setQrOrderId] = useState<string | null>(null);
+  const [manualQrUrl, setManualQrUrl] = useState<string | null>(null);
+  const [manualQrOpen, setManualQrOpen] = useState(false);
   const customerSearchRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const fetchData = useCallback(async () => {
     setLoading(true);
-    const [pRes, dRes, meRes] = await Promise.all([fetch("/api/products"), fetch("/api/discounts"), fetch("/api/me")]);
+    const [pRes, dRes, meRes, qrRes] = await Promise.all([
+      fetch("/api/products"),
+      fetch("/api/discounts"),
+      fetch("/api/me"),
+      fetch("/api/addons/qr-bolivia"),
+    ]);
     if (pRes.ok) { const d = await pRes.json(); setProducts(d.data ?? d); }
     if (dRes.ok) setDiscounts(await dRes.json());
     if (meRes.ok) {
@@ -99,6 +107,10 @@ export default function POSPage() {
       setBusinessType((me.organization?.businessType ?? "GENERAL") as BusinessType);
       setOrgPlan((me.organization?.plan ?? "BASICO") as PlanType);
       setActiveAddons((me.activeAddons ?? []) as AddonType[]);
+    }
+    if (qrRes.ok) {
+      const qr = await qrRes.json();
+      if (qr.hasUploadedQr) setManualQrUrl(qr.qrImageUrl);
     }
     setLoading(false);
   }, []);
@@ -242,6 +254,7 @@ export default function POSPage() {
     setDiscountCode("");
     setCartOpen(false);
     setQrOrderId(null);
+    setManualQrOpen(false);
     clearCustomer();
     fetchData();
     setTimeout(() => setSuccess(false), 3000);
@@ -273,7 +286,13 @@ export default function POSPage() {
       setSelling(false);
       if (res.ok) {
         const order = await res.json() as { id: string };
-        setQrOrderId(order.id);
+        // Use manual QR if uploaded, otherwise use official provider
+        if (manualQrUrl) {
+          setQrOrderId(order.id);
+          setManualQrOpen(true);
+        } else {
+          setQrOrderId(order.id);
+        }
       }
       return;
     }
@@ -505,13 +524,23 @@ export default function POSPage() {
 
   return (
     <>
-      {/* QR Payment modal */}
-      {qrOrderId && (
+      {/* QR Payment modal (official provider) */}
+      {qrOrderId && !manualQrOpen && (
         <QrPaymentModal
           orderId={qrOrderId}
           amount={total}
           onPaid={finalizeSale}
           onCancel={() => { setQrOrderId(null); setPaymentMethod("EFECTIVO"); }}
+        />
+      )}
+
+      {/* Manual QR modal (uploaded QR image) */}
+      {manualQrOpen && manualQrUrl && qrOrderId && (
+        <ManualQrModal
+          qrImageUrl={manualQrUrl}
+          amount={total}
+          onPaid={finalizeSale}
+          onCancel={() => { setManualQrOpen(false); setQrOrderId(null); setPaymentMethod("EFECTIVO"); }}
         />
       )}
 

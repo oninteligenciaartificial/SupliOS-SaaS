@@ -15,7 +15,7 @@ const createSchema = z.object({
 
 // GET — lista todos los usuarios no-SUPERADMIN
 export async function GET(request: Request) {
-  const rateLimited = checkRateLimit(request, "superadmin-users", { windowMs: 60_000, max: 30 });
+  const rateLimited = await checkRateLimit(request, "superadmin-users", { windowMs: 60_000, max: 30 });
   if (rateLimited) return rateLimited;
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
@@ -40,7 +40,7 @@ export async function POST(request: Request) {
   const adminProfile = await prisma.profile.findUnique({ where: { userId: user.id } });
   if (!adminProfile || adminProfile.role !== "SUPERADMIN") return NextResponse.json({ error: "Sin permiso" }, { status: 403 });
 
-  const rateLimited = checkRateLimit(request, "superadmin-create-user", { windowMs: 60_000, max: 5 });
+  const rateLimited = await checkRateLimit(request, "superadmin-create-user", { windowMs: 60_000, max: 5 });
   if (rateLimited) return rateLimited;
 
   let body: unknown;

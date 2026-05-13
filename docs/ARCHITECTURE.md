@@ -40,11 +40,17 @@ lib/
 ├── plans.ts              # Planes, límites, feature gates
 ├── permissions.ts        # RBAC por rol
 ├── business-types.ts     # Schemas de variantes por tipo de negocio
-├── email.ts              # Envío via Brevo
+├── business-ui.ts        # UI labels dinámicos por tipo de negocio
+├── email.ts              # Envío via Brevo con logging + rate limiting
 ├── whatsapp.ts           # Envío via Meta Business API
 ├── currency.ts           # Formateo de moneda
 ├── audit.ts              # Registro de auditoría
-├── prisma.ts             # Singleton de PrismaClient
+├── prisma.ts             # Singleton de PrismaClient (lazy init)
+├── rate-limit.ts         # Rate limiting (Upstash Redis + in-memory fallback)
+├── monitoring.ts         # reportAsyncError() + Sentry integration
+├── superadmin.ts         # getSuperAdmin() helper
+├── qr-bolivia.ts         # Generación y tracking de pagos QR
+├── siat.ts               # Facturación electrónica SIAT
 └── supabase/             # Clientes server/client/admin/middleware
 
 prisma/
@@ -69,7 +75,7 @@ Request
 
 ## Multi-tenancy
 
-Todo query a la DB lleva `where: { organizationId: profile.organizationId }`. No hay RLS de Supabase; el aislamiento se hace a nivel de aplicación en cada route handler.
+Todo query a la DB lleva `where: { organizationId: profile.organizationId }`. RLS está habilitado en `public.profiles` con políticas para que usuarios solo vean/editen su propio perfil. El resto del aislamiento se hace a nivel de aplicación en cada route handler. El `service_role` key bypasses RLS automáticamente (usado por Prisma y admin client).
 
 ## Autorización
 
@@ -115,6 +121,9 @@ PLAN_LIMITS[plan].maxProducts        // 150 / 500 / ∞ / ∞
 | `/api/cron/expiry` | Alerta de productos próximos a vencer (7 días) |
 | `/api/cron/inactive-customers` | Email a clientes sin compras en 30+ días |
 | `/api/cron/plan-expiry` | Alerta y suspensión de planes vencidos |
+| `/api/cron/low-stock` | Alerta de stock bajo a admins (CRECER+) |
+| `/api/cron/siat-cufd` | Renueva CUFD para facturación SIAT |
+| `/api/cron/expire-qr` | Expira QRs de pago pendientes vencidos |
 
 ## Variables de entorno requeridas
 
@@ -124,8 +133,22 @@ NEXT_PUBLIC_SUPABASE_URL
 NEXT_PUBLIC_SUPABASE_ANON_KEY
 SUPABASE_SERVICE_ROLE_KEY
 BREVO_API_KEY
+BREVO_SENDER_EMAIL
+BREVO_SENDER_NAME
+BREVO_WEBHOOK_KEY
 EMAIL_FROM_ADDRESS
 WA_PHONE_NUMBER_ID
 WA_ACCESS_TOKEN
 WA_APP_SECRET
+UPSTASH_REDIS_REST_URL      # opcional — rate limiting distribuido
+UPSTASH_REDIS_REST_TOKEN    # opcional — rate limiting distribuido
 ```
+
+## Seguridad
+
+- **RLS:** Habilitado en `public.profiles` con políticas de lectura/escritura propias
+- **Rate limiting:** Upstash Redis con fallback in-memory, aplicado en múltiples endpoints
+- **Headers de seguridad:** CSP, HSTS, X-Frame-Options, X-Content-Type-Options, etc.
+- **Sentry:** Error monitoring con user context y replays
+- **Audit logging:** `logAudit()` para operaciones críticas (plan EMPRESARIAL)
+- **Ver `docs/SECURITY_REPORT.md` para reporte completo**

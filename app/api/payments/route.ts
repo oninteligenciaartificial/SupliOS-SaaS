@@ -31,7 +31,7 @@ export async function POST(request: Request) {
   if (profile.role !== "ADMIN") return NextResponse.json({ error: "Sin permiso" }, { status: 403 });
 
   // Rate limit: 5 payment requests per minute per org
-  const rateLimited = checkOrgRateLimit(profile.organizationId, "payments", { windowMs: 60_000, max: 5 });
+  const rateLimited = await checkOrgRateLimit(profile.organizationId, "payments", { windowMs: 60_000, max: 5 });
   if (rateLimited) return rateLimited;
 
   let body: unknown;

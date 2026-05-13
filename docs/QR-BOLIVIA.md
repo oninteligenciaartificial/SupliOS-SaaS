@@ -2,7 +2,27 @@
 
 ## Estado
 
-Scaffold completo implementado. **Requiere PSP externo para activar.**
+Dos modos implementados:
+
+### Modo 1: QR Personal (sin NIT) ✅ Implementado
+Para merchants que no tienen NIT o no quieren contratar PSP.
+
+**Flujo:**
+1. Merchant va a `/billing` → Addon QR Bolivia → selecciona "No tengo NIT"
+2. Sube imagen QR de su banco/Tigo/BiPago
+3. Imagen se guarda en Supabase Storage bucket `org-assets`
+4. En POS checkout → `ManualQrModal` muestra el QR subido al cliente
+5. Cliente escanea y paga manualmente → merchant confirma recepción
+
+**Archivos:**
+- `app/(dashboard)/billing/page.tsx` — UI de addon con branching NIT/No-NIT
+- `app/api/addons/qr-bolivia/upload/route.ts` — Upload de imagen QR
+- `app/api/addons/qr-bolivia/route.ts` — GET para POS fetch del QR URL
+- `app/(dashboard)/pos/ManualQrModal.tsx` — Modal mostrando QR en checkout
+
+**Storage:** Bucket `org-assets`, path `qr-{orgId}-{timestamp}.{ext}`
+
+### Modo 2: QR Automático (con NIT) ⚠️ Requiere PSP externo
 
 ## Variables de entorno requeridas
 

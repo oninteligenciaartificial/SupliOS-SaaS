@@ -30,7 +30,7 @@ export async function POST(request: Request) {
   if (!profile || profile.role !== "ADMIN") return NextResponse.json({ error: "No autorizado" }, { status: 403 });
 
   // Rate limit: 5 invitations per minute per org
-  const rateLimited = checkOrgRateLimit(profile.organizationId, "team", { windowMs: 60_000, max: 5 });
+  const rateLimited = await checkOrgRateLimit(profile.organizationId, "team", { windowMs: 60_000, max: 5 });
   if (rateLimited) return rateLimited;
 
   if (!canUseFeature(profile.plan, "staff")) return NextResponse.json(planGateError("staff"), { status: 403 });

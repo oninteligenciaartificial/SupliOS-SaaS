@@ -31,7 +31,7 @@ export async function POST(request: Request) {
   if (!profile) return NextResponse.json({ error: "No autorizado" }, { status: 401 });
   if (!hasPermission(profile.role, "discounts:create")) return NextResponse.json({ error: "Sin permiso" }, { status: 403 });
 
-  const rateLimited = checkOrgRateLimit(profile.organizationId, "discounts", RATE_LIMITS.write);
+  const rateLimited = await checkOrgRateLimit(profile.organizationId, "discounts", RATE_LIMITS.write);
   if (rateLimited) return rateLimited;
 
   let body: unknown;

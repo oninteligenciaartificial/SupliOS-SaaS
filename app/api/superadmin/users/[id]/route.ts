@@ -14,7 +14,7 @@ export async function DELETE(
   const adminProfile = await prisma.profile.findUnique({ where: { userId: user.id } });
   if (!adminProfile || adminProfile.role !== "SUPERADMIN") return NextResponse.json({ error: "Sin permiso" }, { status: 403 });
 
-  const rateLimited = checkRateLimit(request, "superadmin-delete-user", { windowMs: 60_000, max: 10 });
+  const rateLimited = await checkRateLimit(request, "superadmin-delete-user", { windowMs: 60_000, max: 10 });
   if (rateLimited) return rateLimited;
 
   const { id } = await params;

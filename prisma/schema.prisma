@@ -532,3 +532,24 @@ model CashRegister {
   @@index([organizationId, date(sort: Desc)])
   @@map("cash_registers")
 }
+
+// =============================================
+// EMAIL LOG (tracking de envíos via Brevo)
+// =============================================
+
+model EmailLog {
+  id             String   @id @default(cuid())
+  organizationId String?
+  to             String
+  type           String   // "order_confirmation", "birthday", "low_stock", etc.
+  subject        String
+  status         String   @default("SENT") // SENT, DELIVERED, BOUNCED, BLOCKED, FAILED
+  brevoMessageId String?
+  error          String?
+  createdAt      DateTime @default(now())
+
+  @@index([organizationId, createdAt])
+  @@index([status, createdAt])
+  @@index([type, createdAt])
+  @@map("email_logs")
+}

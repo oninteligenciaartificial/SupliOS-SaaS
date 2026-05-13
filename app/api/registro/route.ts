@@ -16,7 +16,7 @@ const schema = z.object({
 
 export async function POST(request: Request) {
   const ip = getRequestIp(request.headers);
-  const rateLimit = consumeRateLimit(`registro:${ip}`, {
+  const rateLimit = await consumeRateLimit(`registro:${ip}`, {
     windowMs: 60_000,
     max: 10,
   });

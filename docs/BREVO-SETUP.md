@@ -4,19 +4,53 @@
 
 ```env
 BREVO_API_KEY=xkeysib-...                        # API key de Brevo — obtener en Brevo → Settings → SMTP & API → API Keys
-EMAIL_FROM_ADDRESS=oninteligenciaartificial@gmail.com  # Remitente verificado en Brevo (temporal hasta tener dominio propio)
+BREVO_SENDER_EMAIL=oninteligenciaartificial@gmail.com  # Remitente verificado en Brevo
+BREVO_SENDER_NAME=GestiOS                        # Nombre del remitente
+BREVO_WEBHOOK_KEY=string-aleatorio-largo         # Key para verificar webhook (generar con crypto.randomUUID())
+EMAIL_FROM_ADDRESS=oninteligenciaartificial@gmail.com  # Fallback si BREVO_SENDER_EMAIL no está
 CRON_SECRET=...                                   # String aleatorio largo — Vercel lo envía en header Authorization
 ```
 
-## Estado actual ✅ FUNCIONANDO
+## Estado actual ✅ FUNCIONANDO CON LOGGING
 
 - **Brevo API key:** configurada en Vercel ✅
-- **Remitente temporal:** `oninteligenciaartificial@gmail.com` — verificado en Brevo, emails llegando ✅
-- **Pendiente:** verificar dominio propio con DKIM/SPF para usar `noreply@gestios.app`
-  - Requiere dominio propio (no funciona con `.vercel.app`)
-  - Comprar en Namecheap/Porkbun ~$12/año
-  - Agregar registros SPF + DKIM + DMARC en DNS del dominio
-  - Una vez verificado: cambiar `EMAIL_FROM_ADDRESS=noreply@gestios.app`
+- **Remitente:** `oninteligenciaartificial@gmail.com` — verificado en Brevo ✅
+- **Email logging:** Cada envío se registra en `EmailLog` table ✅
+- **Webhook Brevo:** Endpoint `/api/webhooks/brevo` para tracking de delivery ✅
+- **Rate limiting:** 280 emails/día (buffer de 20 sobre el límite de 300) ✅
+- **Dashboard métricas:** `/email-stats` para SUPERADMIN ✅
+- **Pendiente:** verificar dominio propio para usar `noreply@gestios.app`
+  - Ver `docs/EMAIL-MIGRATION-GUIDE.md`
+
+## Arquitectura actualizada
+
+```
+┌─────────────────┐     ┌──────────────┐     ┌──────────────┐
+│  API Routes     │────>│  lib/email   │────>│  Brevo API   │
+│  (orders, cron) │     │  (wrapper)   │     │  (SMTP)      │
+└─────────────────┘     └──────┬───────┘     └──────────────┘
+                               │
+                               ▼
+                        ┌──────────────┐     ┌──────────────┐
+                        │  EmailLog    │<────│  Webhook     │
+                        │  (Prisma DB) │     │  /api/webhooks/brevo
+                        └──────────────┘     └──────────────┘
+```
+
+### n8n bridge (plan gratuito)
+
+Brevo free plan no tiene webhooks nativos. Para tracking de delivery/bounce:
+
+```
+┌──────────────┐     ┌──────────────┐     ┌──────────────────┐
+│  Brevo       │────>│  n8n workflow│────>│  GestiOS         │
+│  (email sent)│     │  (polling)   │     │  /api/webhooks   │
+└──────────────┘     └──────────────┘     └──────────────────┘
+```
+
+Workflow: `n8n/brevo-email-tracking.json`
+
+**Para webhooks nativos:** actualizar a plan Starter ($25/mes) y configurar webhook directo en Brevo → Settings → Webhooks.
 
 ## Pasos para configurar Brevo
 
@@ -30,63 +64,80 @@ CRON_SECRET=...                                   # String aleatorio largo — V
 - Nombre: `gestios-production`
 - Copiar la key → pegar en `BREVO_API_KEY` en Vercel
 
-### 3. Verificar dominio remitente
-- **Settings** → **Senders & IPs** → **Domains**
-- Agregar tu dominio (ej. `gestios.app`)
-- Agregar los registros DNS que Brevo indica (SPF, DKIM, DMARC)
-- Sin verificación: emails van a spam o son rechazados
+### 3. Verificar remitente
+- **Settings** → **Senders & IPs** → **Senders** → Agregar y verificar
+- Email: `oninteligenciaartificial@gmail.com` (o tu dominio propio)
 
-### 4. Verificar dirección alternativa (sin dominio propio)
-- Si usás `@gmail.com` u otro dominio externo: **Senders & IPs** → **Senders** → Agregar y verificar
-- Solo recomendado para desarrollo/testing
+### 4. Configurar webhook
+- **Settings** → **Webhooks** → Add a Webhook
+- URL: `https://gestios.app/api/webhooks/brevo`
+- Eventos: delivered, bounce, blocked, spam
+- Agregar `BREVO_WEBHOOK_KEY` en Vercel
 
 ### 5. Configurar en Vercel
 - Vercel Dashboard → tu proyecto → **Settings** → **Environment Variables**
-- Agregar `BREVO_API_KEY` y `EMAIL_FROM_ADDRESS`
+- Agregar las 5 variables arriba
 - Aplicar a Production + Preview
 
 ---
 
 ## Emails automáticos implementados
 
-| Email | Disparador | Plan requerido |
-|---|---|---|
-| Bienvenida al cliente | POST `/api/registro` | Todos |
-| Confirmación de pedido | POST `/api/orders` + checkout tienda | Todos |
-| Alerta nuevo pedido (admin) | POST `/api/orders` | Todos |
-| Actualización de estado | PATCH `/api/orders/[id]` | Todos |
-| Puntos de lealtad acumulados | PATCH `/api/orders/[id]` (ENTREGADO) | Todos |
-| Cumpleaños + código descuento | Cron 09:00 diario | EMPRESARIAL |
-| Cliente inactivo (30 días) | Cron 10:00 diario | EMPRESARIAL |
-| Productos por vencer (7 días) | Cron 08:00 diario | EMPRESARIAL |
-| Stock bajo | Cron 08:30 diario | CRECER+ |
-| Plan próximo a vencer | Cron 07:00 diario | Todos |
-| Plan vencido | Cron 07:00 diario | Todos |
-| Plan activado (pago aprobado) | Superadmin aprueba pago | Todos |
+| Email | Disparador | Plan requerido | Type |
+|---|---|---|---|
+| Bienvenida al cliente | POST `/api/registro` | Todos | `welcome_email` |
+| Confirmación de pedido | POST `/api/orders` + checkout tienda | Todos | `order_confirmation` |
+| Alerta nuevo pedido (admin) | POST `/api/orders` | Todos | `new_order_alert` |
+| Actualización de estado | PATCH `/api/orders/[id]` | Todos | `order_status_update` |
+| Puntos de lealtad acumulados | PATCH `/api/orders/[id]` (ENTREGADO) | Todos | `loyalty_points_email` |
+| Cumpleaños + código descuento | Cron 09:00 diario | EMPRESARIAL | `birthday_email` |
+| Cliente inactivo (30 días) | Cron 10:00 diario | EMPRESARIAL | `inactive_customer_email` |
+| Productos por vencer (7 días) | Cron 08:00 diario | EMPRESARIAL | `expiry_alert` |
+| Stock bajo | Cron 08:30 diario | CRECER+ | `low_stock_alert` |
+| Plan próximo a vencer | Cron 07:00 diario | Todos | `plan_expiry_warning` |
+| Plan activado (pago aprobado) | Superadmin aprueba pago | Todos | `plan_activated` |
+| Plan vencido | Cron 07:00 diario | Todos | `plan_expired` |
 
 ---
 
-## Variable CRON_SECRET
+## Testing
 
-Todos los cron jobs requieren header `Authorization: Bearer <CRON_SECRET>`.
-Vercel lo agrega automáticamente. Solo asegurarse de tener:
-
-```env
-CRON_SECRET=un-string-largo-y-aleatorio
+### Tests unitarios
+```bash
+npm test -- tests/email.test.ts
 ```
 
-En Vercel Settings → Environment Variables.
+### Test manual (envía emails reales)
+```bash
+TEST_EMAIL=tu-email@gmail.com npx tsx scripts/test-emails.ts
+```
+
+### Dashboard de métricas
+- URL: `/email-stats` (solo SUPERADMIN y ADMIN)
+- Muestra: total enviados, entregados, rebotados, fallidos
+- Filtros por tipo y estado
 
 ---
 
-## Testing local
+## Rate Limiting
 
-Para probar sin Brevo real: dejar `BREVO_API_KEY` vacío → los emails se ignoran silenciosamente (ver `lib/email.ts`).
+- **Límite diario:** 280 emails (buffer de 20 sobre el límite de Brevo de 300)
+- **Contador:** Usa Upstash Redis con fallback in-memory
+- **Cuando se excede:** Los emails se registran como FAILED con error "Daily email limit reached"
+- **Reset:** Automático a medianoche UTC
 
-Para probar con Mailtrap:
-1. Crear cuenta en https://mailtrap.io (gratis)
-2. Usar SMTP credentials de Mailtrap — pero la integración actual usa la API REST de Brevo, no SMTP genérico
-3. Alternativa: crear cuenta Brevo con email real de prueba y verificar esa dirección
+---
+
+## Migración a dominio propio
+
+Ver `docs/EMAIL-MIGRATION-GUIDE.md` para pasos completos.
+
+Resumen rápido:
+1. Comprar dominio (Namecheap, Porkbun, Cloudflare)
+2. Configurar SPF, DKIM, DMARC en DNS
+3. Verificar dominio en Brevo
+4. Actualizar `BREVO_SENDER_EMAIL` en Vercel
+5. Deploy
 
 ---
 

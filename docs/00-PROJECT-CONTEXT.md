@@ -14,11 +14,12 @@ Deploy en **Vercel**. Sin base de datos local — la DB vive en Supabase. No hay
 
 - **No ejecutar `prisma migrate dev`** — no hay `DATABASE_URL` local. Las migraciones se aplican en Vercel. Si necesitas cambiar el schema: edita `schema.prisma` + crea el SQL en `prisma/migrations/` manualmente.
 - **`prisma generate` sí funciona** — actualiza los tipos del cliente sin necesitar DB.
-- Cada tenant tiene `organizationId`. **Todos los queries deben filtrarse por `organizationId`** — no hay RLS en Supabase, el aislamiento es a nivel de código.
+- Cada tenant tiene `organizationId`. **Todos los queries deben filtrarse por `organizationId`** — RLS está habilitado solo en `public.profiles`, el resto del aislamiento es a nivel de código.
 - Emails se envían con `.catch(() => {})` — no bloquean la respuesta. Intencionado.
 - Stock decrements van a `ProductVariant` si `item.variantId` existe, a `Product` si no. No cambiar esta lógica.
 - **Campos `Json?` en Prisma** — nunca asignar `null` directo. Usar `Prisma.DbNull` para NULL, `undefined` para omitir, valor directo para guardar. Requiere `import { Prisma }` (no `import type`). Ver `SESSION_LOG.md` entradas 3-6 para el patrón completo.
 - **Zod `z.record()`** — esta versión requiere 2 argumentos: `z.record(z.string(), valueType)`. Un argumento no compila.
+- **RLS en profiles:** `"userId"` es TEXT, `auth.uid()` devuelve UUID — requiere cast `::text` en políticas SQL.
 
 ## Archivos clave
 
@@ -28,7 +29,10 @@ Deploy en **Vercel**. Sin base de datos local — la DB vive en Supabase. No hay
 | `lib/plans.ts` | Feature gates, plan limits, add-on meta |
 | `lib/permissions.ts` | RBAC — `hasPermission(role, permission)` |
 | `lib/business-types.ts` | Schemas de variantes por tipo de negocio |
-| `lib/email.ts` | Todas las funciones de email (Brevo) |
+| `lib/business-ui.ts` | UI labels dinámicos por tipo de negocio |
+| `lib/email.ts` | Envío de emails con logging, rate limiting (280/día) |
+| `lib/rate-limit.ts` | Rate limiting distribuido (Upstash Redis + in-memory) |
+| `lib/qr-bolivia.ts` | Generación y tracking de pagos QR |
 | `prisma/schema.prisma` | Fuente de verdad de la DB |
 
 ## Estructura de una API route típica
@@ -66,17 +70,21 @@ export async function GET(request: Request) {
 | PRO | 800 | ∞ | ∞ | 10 |
 | EMPRESARIAL | 1250 | ∞ | ∞ | ∞ |
 
-## Estado actual (2026-04-29)
+## Estado actual (2026-05-11)
 
-- Sistema de variantes por tipo de negocio: **implementado** (5 build fixes aplicados 2026-04-28/29)
-- Add-ons: WhatsApp y Exportación Contable ya implementados; SIAT/QR Bolivia/E-commerce siguen pendientes
-- WhatsApp: backend listo y sin `comingSoon`; falta configuración externa en Vercel/Meta
-- Loyalty points: acumulación y canje en POS implementados
-- Audit log: backend + UI `/audit` implementados (plan EMPRESARIAL)
-- `logAudit()` activo en orders (create/update); **pendiente** en products y customers (6 handlers)
-- **Bug activo [HIGH]:** `app/api/customers/[id]/route.ts` — PUT y DELETE sin `hasPermission()`
-- Tests: solo `tests/rate-limit.test.ts` (5 tests unitarios); cobertura insuficiente
-- Ver análisis completo en `docs/ANALYSIS.md`
+- Sistema de variantes por tipo de negocio: **implementado**
+- Add-ons: WhatsApp backend listo, SIAT/QR Bolivia scaffold, QR Bolivia upload implementado
+- QR Bolivia: merchants sin NIT pueden subir QR personal de banco/Tigo
+- Email system: Brevo con logging en DB (`EmailLog`), rate limiting 280/día, dashboard métricas `/email-stats`
+- Webhook Brevo: `/api/webhooks/brevo` para tracking delivery/bounce
+- n8n workflow: `n8n/brevo-email-tracking.json` bridge para plan gratuito de Brevo
+- RLS: habilitado en `public.profiles` con políticas de acceso propio
+- Rate limiting: Upstash Redis con fallback in-memory, aplicado en múltiples endpoints
+- Sentry: error monitoring activo en producción
+- Tests: 229 tests pasando (18 nuevos de email)
+- Sidebar dinámico: labels cambian según `businessType` del org
+- Plan gating completo: variantes requieren CRECER+, tienda PRO+, etc.
+- Ver análisis completo en `docs/ANALYSIS.md`, log de sesiones en `docs/SESSION_LOG.md`
 
 ## Documentación completa
 
@@ -87,5 +95,14 @@ Ver carpeta `docs/`:
 - `BUSINESS_TYPES.md` — variantes por tipo de negocio
 - `API_REFERENCE.md` — todos los endpoints
 - `EMAILS.md` — emails automáticos
+- `BREVO-SETUP.md` — configuración de Brevo
+- `EMAIL-MIGRATION-GUIDE.md` — migrar a dominio propio
+- `QR-BOLIVIA.md` — pagos QR Bolivia
+- `SIAT-BOLIVIA.md` — facturación electrónica
 - `ONBOARDING_FLOW.md` — flujo de registro
 - `NEXT_STEPS.md` — tareas pendientes
+- `PLAN.md` — plan de trabajo
+- `SECURITY_REPORT.md` — reporte de seguridad
+- `SENTRY.md` — error monitoring
+- `SESSION_LOG.md` — log de sesiones
+- `00-PROJECT-CONTEXT.md` — este archivo

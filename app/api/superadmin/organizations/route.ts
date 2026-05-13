@@ -33,7 +33,7 @@ export async function POST(request: Request) {
   const admin = await getSuperAdmin();
   if (!admin) return NextResponse.json({ error: "No autorizado" }, { status: 403 });
 
-  const rateLimited = checkRateLimit(request, "superadmin-create-org", { windowMs: 60_000, max: 5 });
+  const rateLimited = await checkRateLimit(request, "superadmin-create-org", { windowMs: 60_000, max: 5 });
   if (rateLimited) return rateLimited;
 
   let body: unknown;

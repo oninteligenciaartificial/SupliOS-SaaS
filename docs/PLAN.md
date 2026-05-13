@@ -8,9 +8,9 @@ Generado: 2026-05-06. Basado en análisis completo del codebase y documentación
 
 | Métrica | Valor |
 |---|---|
-| API Routes | 54 |
+| API Routes | 54+ |
 | Lib Files | 22 |
-| Test Files | 7 (94 tests) |
+| Test Files | 12 (229 tests) |
 | Estado | Producción activa |
 | Stack | Next.js 16 + React 19 + Prisma + Supabase |
 
@@ -18,8 +18,8 @@ Generado: 2026-05-06. Basado en análisis completo del codebase y documentación
 
 | Área | Estado | Detalle |
 |---|---|---|
-| Auth + Multi-tenancy | ✅ Completo | Supabase Auth, getTenantProfile() |
-| POS + Variantes | ✅ Completo | Carrito, loyalty canje, barcode scanner |
+| Auth + Multi-tenancy | ✅ Completo | Supabase Auth, getTenantProfile(), RLS en profiles |
+| POS + Variantes | ✅ Completo | Carrito, loyalty canje, barcode scanner, QR personal |
 | Inventario | ✅ Completo | CRUD, variantes, stock entries, imagen |
 | Pedidos | ✅ Completo | Estados, email, transacciones atómicas |
 | Clientes | ✅ Completo | CRM, loyalty, CSV import/export |
@@ -27,11 +27,12 @@ Generado: 2026-05-06. Basado en análisis completo del codebase y documentación
 | Staff | ✅ Completo | CRUD, roles, permisos |
 | Cron Jobs | ✅ 7 jobs | Birthday, expiry, inactive, plan, low-stock, CUFD, QR |
 | Sentry | ✅ Activo | Error monitoring en producción |
-| Tests | ✅ 94 pasando | Unit tests con Vitest |
-| Rate Limiting | ⚠️ Básico | Solo en /api/registro, in-memory |
+| Tests | ✅ 229 pasando | 12 test files con Vitest |
+| Rate Limiting | ✅ Distribuido | Upstash Redis + in-memory fallback |
+| Email System | ✅ Completo | Brevo con logging, rate limiting, webhook, dashboard |
+| QR Bolivia | ✅ Parcial | Upload personal implementado, PSP pendiente |
 | WhatsApp | ⚠️ Backend listo | Falta config externa |
 | SIAT | ⚠️ Scaffold | Requiere intermediario externo |
-| QR Bolivia | ⚠️ Scaffold | Requiere PSP externo |
 | E-commerce | ✅ Implementado | /{slug}/tienda |
 
 ---
@@ -219,15 +220,16 @@ Generado: 2026-05-06. Basado en análisis completo del codebase y documentación
 
 ### 4.4 Emails con Dominio Propio
 
-**Estado:** Remitente temporal (oninteligenciaartificial@gmail.com).
+**Estado:** Brevo configurado con logging, rate limiting 280/día, webhook tracking, dashboard métricas. Remitente actual: `oninteligenciaartificial@gmail.com`.
 
 **Pasos para activar:**
 1. Comprar dominio gestios.app (~$12/año)
 2. Configurar DNS en Brevo (SPF, DKIM, DMARC)
 3. Verificar dominio
-4. Cambiar `EMAIL_FROM_ADDRESS=noreply@gestios.app`
+4. Cambiar `BREVO_SENDER_EMAIL=noreply@gestios.app` en Vercel
+5. Deploy
 
-**Documentación:** `docs/BREVO-SETUP.md`
+**Documentación:** `docs/BREVO-SETUP.md`, `docs/EMAIL-MIGRATION-GUIDE.md`
 
 ---
 
@@ -246,10 +248,10 @@ Generado: 2026-05-06. Basado en análisis completo del codebase y documentación
 
 | Métrica | Actual | Objetivo |
 |---|---|---|
-| Tests pasando | 94 | 150+ |
-| Cobertura | Desconocida | >80% |
-| Rate limited endpoints | 1 | 6+ |
-| Documentación actualizada | Parcial | 100% |
+| Tests pasando | 229 | 250+ |
+| Cobertura | ~70% | >80% |
+| Rate limited endpoints | 12+ | 12+ ✅ |
+| Documentación actualizada | 100% | 100% ✅ |
 | Bugs conocidos | 0 | 0 |
 
 ---
@@ -264,6 +266,12 @@ Generado: 2026-05-06. Basado en análisis completo del codebase y documentación
 - `docs/ANALYSIS.md` — Análisis completo
 - `docs/SESSION_LOG.md` — Log de sesiones
 - `docs/BREVO-SETUP.md` — Configuración email
-- `docs/SIAT-BOLIVIA.md` — Facturación electrónica
+- `docs/EMAIL-MIGRATION-GUIDE.md` — Migrar a dominio propio
+- `docs/EMAILS.md` — Emails automáticos
 - `docs/QR-BOLIVIA.md` — Pagos QR
+- `docs/SIAT-BOLIVIA.md` — Facturación electrónica
+- `docs/SECURITY_REPORT.md` — Reporte de seguridad
+- `docs/SENTRY.md` — Error monitoring
+- `docs/ONBOARDING_FLOW.md` — Flujo de onboarding
+- `docs/BUSINESS_TYPES.md` — Tipos de negocio y variantes
 - `docs/SENTRY.md` — Error monitoring

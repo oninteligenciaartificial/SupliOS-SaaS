@@ -1,5 +1,65 @@
 ---
 
+## 2026-05-11 — RLS en profiles + Brevo email system + QR Bolivia addon
+
+### Fix: RLS habilitado en public.profiles (Supabase lint 0013)
+
+**Problema:** Supabase alertó que `public.profiles` tenía RLS deshabilitado, exponiendo todas las filas via PostgREST al rol `anon`.
+
+**Solución:** RLS habilitado + políticas para que usuarios solo vean/editen su propio perfil. El `service_role` (usado por Prisma y admin client) bypassa RLS automáticamente.
+
+**SQL aplicado en Supabase:**
+```sql
+ALTER TABLE public.profiles ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "Profiles read own"
+ON public.profiles FOR SELECT TO authenticated
+USING ("userId" = auth.uid()::text);
+
+CREATE POLICY "Profiles update own"
+ON public.profiles FOR UPDATE TO authenticated
+USING ("userId" = auth.uid()::text)
+WITH CHECK ("userId" = auth.uid()::text);
+
+CREATE POLICY "Profiles insert own"
+ON public.profiles FOR INSERT TO authenticated
+WITH CHECK ("userId" = auth.uid()::text);
+```
+
+**Nota clave:** `"userId"` es `TEXT` en el schema, pero `auth.uid()` devuelve `UUID` — requiere cast `::text`.
+
+### Feat: Brevo email system con logging, rate limiting y métricas
+
+**Cambios:**
+- `lib/email.ts` — Wrapper con `EmailLog` en DB, rate limiting diario (280 emails), sender fallback a `BREVO_SENDER_EMAIL`
+- `prisma/schema.prisma` — Modelo `EmailLog` agregado
+- `prisma/migrations/20260511181518_create_email_log/migration.sql` — Migration manual para Supabase
+- `app/api/webhooks/brevo/route.ts` — Webhook para tracking delivery/bounce (requiere `BREVO_WEBHOOK_KEY`)
+- `app/api/superadmin/email-stats/route.ts` — API de métricas para SUPERADMIN
+- `app/(dashboard)/email-stats/page.tsx` — Dashboard de métricas de email
+- `n8n/brevo-email-tracking.json` — Workflow n8n para bridge Brevo → GestiOS (free plan no tiene webhooks nativos)
+- `tests/email.test.ts` — 18 tests nuevos para funciones de email
+- `scripts/test-emails.ts` — Script para enviar emails de prueba
+- `docs/EMAIL-MIGRATION-GUIDE.md` — Guía para migrar a dominio personalizado
+- `docs/BREVO-SETUP.md` — Actualizado con nueva configuración
+
+**IMPORTANTE:** La migration `email_logs` debe aplicarse manualmente a Supabase.
+
+### Feat: QR Bolivia addon con upload de QR personal
+
+**Cambios:**
+- `app/(dashboard)/billing/page.tsx` — UI de addon QR Bolivia con branching NIT vs No-NIT
+- `app/api/addons/qr-bolivia/route.ts` — GET para POS fetch del QR URL
+- `app/api/addons/qr-bolivia/upload/route.ts` — Upload de imagen QR a Supabase Storage
+- `app/(dashboard)/pos/ManualQrModal.tsx` — Modal mostrando QR subido en checkout
+- `docs/QR-BOLIVIA.md` — Documentación del sistema
+
+### Deploy
+- Vercel env vars configurados: `BREVO_SENDER_EMAIL`, `BREVO_SENDER_NAME`, `BREVO_WEBHOOK_KEY`
+- Producción: https://gesti-os.vercel.app
+
+---
+
 ## 2026-05-09 (sesión tarde) — Categorías por tipo de negocio
 
 ### Feat: Categorías scopeadas por businessType

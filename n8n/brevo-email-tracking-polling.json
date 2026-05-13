@@ -1,0 +1,182 @@
+{
+  "name": "GestiOS - Brevo Email Tracking (Polling)",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "minutes",
+              "interval": 5
+            }
+          ]
+        }
+      },
+      "id": "schedule-trigger",
+      "name": "Every 5 Minutes",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [240, 300]
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "https://api.brevo.com/v3/smtp/statistics/events",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "limit",
+              "value": "100"
+            },
+            {
+              "name": "days",
+              "value": "1"
+            },
+            {
+              "name": "sort",
+              "value": "desc"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "fetch-brevo-events",
+      "name": "Fetch Brevo Events",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [460, 300],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "brevo-api",
+          "name": "Brevo API Key"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "const staticData = getWorkflowStaticData('global');\nconst processedIds = staticData.processedIds || [];\n\n// Skip if already processed\nif (processedIds.includes($json.messageId)) {\n  return null;\n}\n\n// Filter events from last 5 minutes only\nconst eventTime = new Date($json.date);\nconst fiveMinutesAgo = new Date(Date.now() - 5 * 60 * 1000);\nif (eventTime < fiveMinutesAgo) {\n  return null;\n}\n\n// Return formatted event for GestiOS\nreturn {\n  json: {\n    event: $json.event,\n    email: $json.email,\n    messageId: $json.messageId,\n    date: $json.date,\n    reason: $json.reason || ''\n  }\n};"
+      },
+      "id": "filter-new-events",
+      "name": "Filter New Events",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [680, 300]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.GESTIOS_URL }}/api/webhooks/brevo",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "x-brevo-webhook-key",
+              "value": "={{ $env.BREVO_WEBHOOK_KEY }}"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"event\": \"{{ $json.event }}\",\n  \"email\": \"{{ $json.email }}\",\n  \"message-id\": \"{{ $json.messageId }}\",\n  \"date\": \"{{ $json.date }}\",\n  \"reason\": \"{{ $json.reason }}\"\n}",
+        "options": {}
+      },
+      "id": "send-to-gestios",
+      "name": "Send to GestiOS",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [900, 300]
+    },
+    {
+      "parameters": {
+        "jsCode": "const staticData = getWorkflowStaticData('global');\nconst existingIds = staticData.processedIds || [];\nconst newIds = $input.all().map(item => item.json.messageId);\n\n// Combine, deduplicate, keep last 1000 to prevent bloat\nconst allIds = [...new Set([...existingIds, ...newIds])].slice(-1000);\nstaticData.processedIds = allIds;\n\nreturn [{ json: { processed: newIds.length, total: allIds.length } }];"
+      },
+      "id": "update-static-data",
+      "name": "Update Static Data",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1120, 300]
+    }
+  ],
+  "connections": {
+    "Every 5 Minutes": {
+      "main": [
+        [
+          {
+            "node": "Fetch Brevo Events",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Fetch Brevo Events": {
+      "main": [
+        [
+          {
+            "node": "Filter New Events",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Filter New Events": {
+      "main": [
+        [
+          {
+            "node": "Send to GestiOS",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send to GestiOS": {
+      "main": [
+        [
+          {
+            "node": "Update Static Data",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "staticData": {
+    "global": {
+      "processedIds": []
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "saveManualExecutions": true,
+    "saveDataErrorExecution": "all",
+    "saveDataSuccessExecution": "all"
+  },
+  "tags": [
+    {
+      "name": "gestios",
+      "color": "blue"
+    },
+    {
+      "name": "email",
+      "color": "green"
+    },
+    {
+      "name": "polling",
+      "color": "orange"
+    }
+  ],
+  "triggerCount": 1,
+  "updatedAt": "2026-05-11T20:30:00.000Z",
+  "versionId": "2"
+}

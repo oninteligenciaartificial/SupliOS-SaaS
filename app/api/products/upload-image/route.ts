@@ -57,7 +57,7 @@ export async function POST(request: Request) {
   if (!hasPermission(profile.role, "products:edit"))
     return NextResponse.json({ error: "Sin permiso" }, { status: 403 });
 
-  const rateLimited = checkOrgRateLimit(profile.organizationId, "upload-image", RATE_LIMITS.upload);
+  const rateLimited = await checkOrgRateLimit(profile.organizationId, "upload-image", RATE_LIMITS.upload);
   if (rateLimited) return rateLimited;
 
   let formData: FormData;

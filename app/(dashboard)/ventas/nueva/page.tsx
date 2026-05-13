@@ -3,10 +3,11 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { getBusinessUI } from "@/lib/business-ui";
 import type { BusinessType } from "@/lib/business-types";
-import { Search, Plus, Minus, Trash2, ShoppingCart, CheckCircle, X, Tag, Star, Banknote, CreditCard, Landmark, Phone, User, FileText, ArrowLeft, Loader2 } from "lucide-react";
+import { Search, Plus, Minus, Trash2, ShoppingCart, CheckCircle, X, Tag, Star, Banknote, CreditCard, Landmark, Phone, User, FileText, ArrowLeft, Loader2, QrCode } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { canUseFeature, canUseAddon } from "@/lib/plans";
 import type { PlanType, AddonType } from "@/lib/plans";
+import { ManualQrModal } from "@/app/(dashboard)/pos/ManualQrModal";
 
 interface ProductVariant {
   id: string;
@@ -69,7 +70,7 @@ export default function NuevaVentaPage() {
   const [search, setSearch] = useState("");
   const [categoryFilter, setCategoryFilter] = useState("");
   const [cart, setCart] = useState<CartItem[]>([]);
-  const [paymentMethod, setPaymentMethod] = useState<"EFECTIVO" | "TARJETA" | "TRANSFERENCIA">("EFECTIVO");
+  const [paymentMethod, setPaymentMethod] = useState<"EFECTIVO" | "TARJETA" | "TRANSFERENCIA" | "QR">("EFECTIVO");
   const [discountCode, setDiscountCode] = useState("");
   const [appliedDiscount, setAppliedDiscount] = useState<Discount | null>(null);
   const [discountError, setDiscountError] = useState("");
@@ -86,14 +87,18 @@ export default function NuevaVentaPage() {
   const [notes, setNotes] = useState("");
   const [customerName, setCustomerName] = useState("");
   const [searchFocused, setSearchFocused] = useState(false);
+  const [manualQrUrl, setManualQrUrl] = useState<string | null>(null);
+  const [manualQrOpen, setManualQrOpen] = useState(false);
+  const [qrOrderId, setQrOrderId] = useState<string | null>(null);
   const customerSearchRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const fetchData = useCallback(async () => {
     setLoading(true);
-    const [pRes, dRes, meRes] = await Promise.all([
+    const [pRes, dRes, meRes, qrRes] = await Promise.all([
       fetch("/api/products?limit=200"),
       fetch("/api/discounts"),
       fetch("/api/me"),
+      fetch("/api/addons/qr-bolivia"),
     ]);
     if (pRes.ok) { const d = await pRes.json(); setProducts(d.data ?? d); }
     if (dRes.ok) setDiscounts(await dRes.json());
@@ -102,6 +107,10 @@ export default function NuevaVentaPage() {
       setBusinessType((me.organization?.businessType ?? "GENERAL") as BusinessType);
       setOrgPlan((me.organization?.plan ?? "BASICO") as PlanType);
       setActiveAddons((me.activeAddons ?? []) as AddonType[]);
+    }
+    if (qrRes.ok) {
+      const qr = await qrRes.json();
+      if (qr.hasUploadedQr) setManualQrUrl(qr.qrImageUrl);
     }
     setLoading(false);
   }, []);
@@ -225,6 +234,45 @@ export default function NuevaVentaPage() {
 
   async function handleSell() {
     if (cart.length === 0) return;
+
+    // QR flow: create order first, then open manual QR modal
+    if (paymentMethod === "QR") {
+      setSelling(true);
+      const res = await fetch("/api/orders", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          customerName: customerName.trim() || (selectedCustomer?.name ?? "Cliente mostrador"),
+          customerId: selectedCustomer?.id,
+          paymentMethod: "TRANSFERENCIA",
+          loyaltyPointsRedeemed: pointsToRedeem > 0 ? pointsToRedeem : undefined,
+          items: cart.map((i) => ({
+            productId: i.product.id,
+            quantity: i.qty,
+            unitPrice: i.effectivePrice,
+            ...(i.variantId ? {
+              variantId: i.variantId,
+              variantSnapshot: {
+                label: i.variantLabel,
+                attributes: i.product.variants?.find((v) => v.id === i.variantId)?.attributes,
+              },
+            } : {}),
+          })),
+          notes: [
+            appliedDiscount ? `Descuento: ${appliedDiscount.code} (-Bs.${fmt(discountAmount)})` : null,
+            notes.trim() || null,
+          ].filter(Boolean).join(" | ") || undefined,
+        }),
+      });
+      setSelling(false);
+      if (res.ok) {
+        const order = await res.json() as { id: string };
+        setQrOrderId(order.id);
+        setManualQrOpen(true);
+      }
+      return;
+    }
+
     setSelling(true);
     const res = await fetch("/api/orders", {
       method: "POST",
@@ -311,6 +359,28 @@ export default function NuevaVentaPage() {
 
   return (
     <div className="h-[calc(100vh-0px)] flex flex-col lg:flex-row">
+      {/* Manual QR modal */}
+      {manualQrOpen && manualQrUrl && qrOrderId && (
+        <ManualQrModal
+          qrImageUrl={manualQrUrl}
+          amount={total}
+          onPaid={() => {
+            setManualQrOpen(false);
+            setQrOrderId(null);
+            setSuccess(qrOrderId);
+            setCart([]);
+            setCustomerName("");
+            setAppliedDiscount(null);
+            setDiscountCode("");
+            setPointsToRedeem(0);
+            setNotes("");
+            clearCustomer();
+            fetchData();
+          }}
+          onCancel={() => { setManualQrOpen(false); setQrOrderId(null); setPaymentMethod("EFECTIVO"); }}
+        />
+      )}
+
       {/* Variant selector modal */}
       {variantTarget && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4">
@@ -580,6 +650,23 @@ export default function NuevaVentaPage() {
               </button>
             ))}
           </div>
+          {canUseFeature(orgPlan, "pagos_qr") && (
+            <button
+              type="button"
+              onClick={() => canUseAddon(activeAddons, "QR_BOLIVIA") ? setPaymentMethod("QR" as never) : null}
+              title={!canUseAddon(activeAddons, "QR_BOLIVIA") ? "Activa el addon QR Bolivia en Configuración" : undefined}
+              className={`w-full py-2 rounded-xl text-xs font-bold transition-colors flex items-center justify-center gap-1.5 ${
+                paymentMethod === "QR"
+                  ? "bg-brand-kinetic-orange text-black"
+                  : canUseAddon(activeAddons, "QR_BOLIVIA")
+                    ? "bg-white/5 text-brand-muted hover:text-white"
+                    : "bg-white/5 text-white/20 cursor-not-allowed"
+              }`}
+            >
+              <QrCode size={13} />
+              QR Bolivia {!canUseAddon(activeAddons, "QR_BOLIVIA") && "(addon inactivo)"}
+            </button>
+          )}
 
           {/* Discount code */}
           {!appliedDiscount ? (

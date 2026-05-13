@@ -29,16 +29,16 @@ describe("consumeRateLimit", () => {
     vi.useRealTimers();
   });
 
-  it("allows requests until the max threshold", () => {
+  it("allows requests until the max threshold", async () => {
     vi.useFakeTimers();
     vi.setSystemTime(new Date("2026-04-29T12:00:00.000Z"));
 
     const key = `test-limit-${Date.now()}`;
     const options = { windowMs: 60_000, max: 2 };
 
-    const first = consumeRateLimit(key, options);
-    const second = consumeRateLimit(key, options);
-    const third = consumeRateLimit(key, options);
+    const first = await consumeRateLimit(key, options);
+    const second = await consumeRateLimit(key, options);
+    const third = await consumeRateLimit(key, options);
 
     expect(first.allowed).toBe(true);
     expect(first.remaining).toBe(1);
@@ -50,19 +50,19 @@ describe("consumeRateLimit", () => {
     expect(third.remaining).toBe(0);
   });
 
-  it("resets bucket after the window expires", () => {
+  it("resets bucket after the window expires", async () => {
     vi.useFakeTimers();
     vi.setSystemTime(new Date("2026-04-29T12:00:00.000Z"));
 
     const key = `test-reset-${Date.now()}`;
     const options = { windowMs: 1_000, max: 1 };
 
-    const first = consumeRateLimit(key, options);
-    const blocked = consumeRateLimit(key, options);
+    const first = await consumeRateLimit(key, options);
+    const blocked = await consumeRateLimit(key, options);
 
     vi.advanceTimersByTime(1_100);
 
-    const afterWindow = consumeRateLimit(key, options);
+    const afterWindow = await consumeRateLimit(key, options);
 
     expect(first.allowed).toBe(true);
     expect(blocked.allowed).toBe(false);
@@ -76,7 +76,7 @@ describe("checkRateLimit", () => {
     vi.useRealTimers();
   });
 
-  it("returns null when request is allowed", () => {
+  it("returns null when request is allowed", async () => {
     vi.useFakeTimers();
     vi.setSystemTime(new Date("2026-05-06T12:00:00.000Z"));
 
@@ -84,11 +84,11 @@ describe("checkRateLimit", () => {
       headers: { "x-forwarded-for": "192.168.1.1" },
     });
 
-    const result = checkRateLimit(request, "test-check", { windowMs: 60_000, max: 10 });
+    const result = await checkRateLimit(request, "test-check", { windowMs: 60_000, max: 10 });
     expect(result).toBeNull();
   });
 
-  it("returns 429 response when rate limited", () => {
+  it("returns 429 response when rate limited", async () => {
     vi.useFakeTimers();
     vi.setSystemTime(new Date("2026-05-06T12:00:00.000Z"));
 
@@ -98,10 +98,10 @@ describe("checkRateLimit", () => {
 
     // Exhaust the limit
     for (let i = 0; i < 3; i++) {
-      checkRateLimit(request, "test-check-limit", { windowMs: 60_000, max: 3 });
+      await checkRateLimit(request, "test-check-limit", { windowMs: 60_000, max: 3 });
     }
 
-    const result = checkRateLimit(request, "test-check-limit", { windowMs: 60_000, max: 3 });
+    const result = await checkRateLimit(request, "test-check-limit", { windowMs: 60_000, max: 3 });
     expect(result).not.toBeNull();
     expect(result?.status).toBe(429);
   });
@@ -112,40 +112,39 @@ describe("checkOrgRateLimit", () => {
     vi.useRealTimers();
   });
 
-  it("returns null when request is allowed", () => {
+  it("returns null when request is allowed", async () => {
     vi.useFakeTimers();
     vi.setSystemTime(new Date("2026-05-06T12:00:00.000Z"));
 
-    const result = checkOrgRateLimit("org-123", "test-org", { windowMs: 60_000, max: 10 });
+    const result = await checkOrgRateLimit("org-123", "test-org", { windowMs: 60_000, max: 10 });
     expect(result).toBeNull();
   });
 
-  it("returns 429 response when rate limited", () => {
+  it("returns 429 response when rate limited", async () => {
     vi.useFakeTimers();
     vi.setSystemTime(new Date("2026-05-06T12:00:00.000Z"));
 
     // Exhaust the limit
     for (let i = 0; i < 5; i++) {
-      checkOrgRateLimit("org-456", "test-org-limit", { windowMs: 60_000, max: 5 });
+      await checkOrgRateLimit("org-456", "test-org-limit", { windowMs: 60_000, max: 5 });
     }
 
-    const result = checkOrgRateLimit("org-456", "test-org-limit", { windowMs: 60_000, max: 5 });
+    const result = await checkOrgRateLimit("org-456", "test-org-limit", { windowMs: 60_000, max: 5 });
     expect(result).not.toBeNull();
     expect(result?.status).toBe(429);
   });
 
-  it("isolates different organizations", () => {
+  it("isolates different organizations", async () => {
     vi.useFakeTimers();
     vi.setSystemTime(new Date("2026-05-06T12:00:00.000Z"));
 
     // Exhaust limit for org-A
     for (let i = 0; i < 3; i++) {
-      checkOrgRateLimit("org-A", "test-isolate", { windowMs: 60_000, max: 3 });
+      await checkOrgRateLimit("org-A", "test-isolate", { windowMs: 60_000, max: 3 });
     }
 
     // org-B should still be allowed
-    const result = checkOrgRateLimit("org-B", "test-isolate", { windowMs: 60_000, max: 3 });
+    const result = await checkOrgRateLimit("org-B", "test-isolate", { windowMs: 60_000, max: 3 });
     expect(result).toBeNull();
   });
 });
-
