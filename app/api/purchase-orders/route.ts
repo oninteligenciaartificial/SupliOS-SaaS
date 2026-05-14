@@ -4,7 +4,6 @@ import { hasPermission } from "@/lib/permissions";
 import { prisma } from "@/lib/prisma";
 import { z } from "zod";
 import { logAudit } from "@/lib/audit";
-import { sendLowStockAlert } from "@/lib/email";
 
 const createSchema = z.object({
   supplierId: z.string().min(1),
@@ -26,7 +25,7 @@ const updateSchema = z.object({
 export async function GET(request: Request) {
   const profile = await getTenantProfile();
   if (!profile) return NextResponse.json({ error: "No autorizado" }, { status: 401 });
-  if (!hasPermission(profile.role, "suppliers:read")) return NextResponse.json({ error: "Sin permiso" }, { status: 403 });
+  if (!hasPermission(profile.role, "suppliers:view")) return NextResponse.json({ error: "Sin permiso" }, { status: 403 });
 
   const { searchParams } = new URL(request.url);
   const page = parseInt(searchParams.get("page") || "1");
@@ -61,11 +60,11 @@ export async function GET(request: Request) {
 export async function POST(request: Request) {
   const profile = await getTenantProfile();
   if (!profile) return NextResponse.json({ error: "No autorizado" }, { status: 401 });
-  if (!hasPermission(profile.role, "suppliers:update")) return NextResponse.json({ error: "Sin permiso" }, { status: 403 });
+  if (!hasPermission(profile.role, "suppliers:create")) return NextResponse.json({ error: "Sin permiso" }, { status: 403 });
 
   const body = await request.json();
   const parsed = createSchema.safeParse(body);
-  if (!parsed.success) return NextResponse.json({ error: "Datos invalidos", details: parsed.error.errors }, { status: 400 });
+  if (!parsed.success) return NextResponse.json({ error: "Datos invalidos", details: parsed.error.issues }, { status: 400 });
 
   const { supplierId, expectedDate, notes, items } = parsed.data;
 
@@ -114,7 +113,7 @@ export async function POST(request: Request) {
 export async function PATCH(request: Request) {
   const profile = await getTenantProfile();
   if (!profile) return NextResponse.json({ error: "No autorizado" }, { status: 401 });
-  if (!hasPermission(profile.role, "suppliers:update")) return NextResponse.json({ error: "Sin permiso" }, { status: 403 });
+  if (!hasPermission(profile.role, "suppliers:create")) return NextResponse.json({ error: "Sin permiso" }, { status: 403 });
 
   const { searchParams } = new URL(request.url);
   const id = searchParams.get("id");
@@ -153,21 +152,8 @@ export async function PATCH(request: Request) {
       )
     );
 
-    // Check if any products are now above minStock and send alert if needed
-    for (const item of items) {
-      const product = await prisma.product.findUnique({
-        where: { id: item.productId },
-        select: { name: true, stock: true, minStock: true },
-      });
-      if (product && product.stock > product.minStock) {
-        sendLowStockAlert({
-          organizationId: profile.organizationId,
-          productName: product.name,
-          currentStock: product.stock,
-          minStock: product.minStock,
-        }).catch(() => {});
-      }
-    }
+    // Stock updated via transaction above
+    // Low stock alerts are handled by the cron job (/api/cron/low-stock)
   }
 
   await logAudit({
@@ -187,7 +173,7 @@ export async function PATCH(request: Request) {
 export async function DELETE(request: Request) {
   const profile = await getTenantProfile();
   if (!profile) return NextResponse.json({ error: "No autorizado" }, { status: 401 });
-  if (!hasPermission(profile.role, "suppliers:update")) return NextResponse.json({ error: "Sin permiso" }, { status: 403 });
+  if (!hasPermission(profile.role, "suppliers:create")) return NextResponse.json({ error: "Sin permiso" }, { status: 403 });
 
   const { searchParams } = new URL(request.url);
   const id = searchParams.get("id");

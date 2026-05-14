@@ -96,6 +96,7 @@ model Organization {
   invoices        Invoice[]
   qrPayments      QrPayment[]
   cashRegisters   CashRegister[]
+  purchaseOrders  PurchaseOrder[]
 
   @@map("organizations")
 }

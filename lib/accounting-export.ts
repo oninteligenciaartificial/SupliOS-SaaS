@@ -81,7 +81,7 @@ async function exportVentas(orgId: string, from: Date, to: Date) {
           product: { select: { name: true, cost: true, category: { select: { name: true } } } },
         },
       },
-      customer: { select: { name: true, nit: true } },
+      customer: { select: { name: true, rfc: true } },
     },
     orderBy: { createdAt: "asc" },
   });
@@ -94,7 +94,7 @@ async function exportVentas(orgId: string, from: Date, to: Date) {
     const date = order.createdAt.toISOString().split("T")[0];
     const folio = order.id.slice(-8).toUpperCase();
     const cliente = escapeCsv(order.customer?.name ?? order.customerName);
-    const nit = escapeCsv(order.customer?.nit ?? "");
+    const nit = escapeCsv(order.customer?.rfc ?? "");
     const metodo = escapeCsv(order.paymentMethod);
     const estado = escapeCsv(order.status);
 
@@ -223,7 +223,7 @@ async function exportClientes(orgId: string, from: Date, to: Date) {
         escapeCsv(c.name),
         escapeCsv(c.phone ?? ""),
         escapeCsv(c.email ?? ""),
-        escapeCsv(c.nit ?? ""),
+        escapeCsv(c.rfc ?? ""),
         escapeCsv(c.address ?? ""),
         c.loyaltyPoints,
         `Bs. ${totalCompras.toFixed(2)}`,
