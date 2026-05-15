@@ -118,6 +118,7 @@ export default async function DashboardLayout({
       .map(s => ({ href: s.href, label: s.label }))
     : []),
     ...(!isImpersonating ? [{ href: "/settings", label: "Configuracion" }] : []),
+    ...(!isImpersonating ? [{ href: "/help", label: "Ayuda" }] : []),
   ];
 
   const navLinks = isSuperAdmin ? [...superAdminLinks, ...externalLinks] : tenantLinks;

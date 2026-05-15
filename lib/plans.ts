@@ -9,10 +9,10 @@ export const PLAN_PRICES_BOB: Record<PlanType, number> = {
 export type AddonType = "WHATSAPP" | "FACTURACION" | "QR_BOLIVIA" | "ECOMMERCE" | "CONTABILIDAD";
 
 export const PLAN_META: Record<PlanType, { label: string; price: string; color: string; bg: string }> = {
-  BASICO:      { label: "Básico",      price: "$50/mes",  color: "text-brand-muted",          bg: "bg-white/5" },
-  CRECER:      { label: "Crecer",      price: "$76/mes",  color: "text-blue-300",              bg: "bg-blue-400/10" },
-  PRO:         { label: "Pro",         price: "$114/mes", color: "text-blue-400",              bg: "bg-blue-500/10" },
-  EMPRESARIAL: { label: "Empresarial", price: "$179/mes", color: "text-brand-kinetic-orange",  bg: "bg-brand-kinetic-orange/10" },
+  BASICO:      { label: "Básico",      price: "Bs. 350/mes",   color: "text-brand-muted",          bg: "bg-white/5" },
+  CRECER:      { label: "Crecer",      price: "Bs. 530/mes",   color: "text-blue-300",              bg: "bg-blue-400/10" },
+  PRO:         { label: "Pro",         price: "Bs. 800/mes",   color: "text-blue-400",              bg: "bg-blue-500/10" },
+  EMPRESARIAL: { label: "Empresarial", price: "Bs. 1.250/mes", color: "text-brand-kinetic-orange",  bg: "bg-brand-kinetic-orange/10" },
 };
 
 export const PLAN_LIMITS: Record<PlanType, { maxProducts: number; maxCustomers: number; maxStaff: number; maxDiscounts: number }> = {
@@ -23,11 +23,11 @@ export const PLAN_LIMITS: Record<PlanType, { maxProducts: number; maxCustomers: 
 };
 
 export const ADDON_META: Record<AddonType, { label: string; price: string; description: string; comingSoon?: boolean }> = {
-  WHATSAPP:    { label: "WhatsApp Business",    price: "$40/mes", description: "300 conversaciones incluidas, excedente $0.08 c/u" },
-  FACTURACION: { label: "Facturación SIAT",    price: "$25/mes", description: "Facturas electrónicas oficiales según el SIN Bolivia",                              comingSoon: true },
-  QR_BOLIVIA:  { label: "Pagos QR Bolivia",    price: "$15/mes", description: "Acepta pagos con QR bancario, Tigo Money y BiPago",                                 comingSoon: true },
-  ECOMMERCE:   { label: "E-commerce",          price: "$20/mes", description: "Conecta tu tienda online y sincroniza inventario automáticamente",                   comingSoon: true },
-  CONTABILIDAD: { label: "Exportación Contable", price: "$18/mes", description: "Exporta ventas y gastos en CSV/Excel para tu contador",                           comingSoon: true },
+  WHATSAPP:    { label: "WhatsApp Business",    price: "Bs. 280/mes",  description: "300 conversaciones incluidas, excedente Bs. 0.55 c/u" },
+  FACTURACION: { label: "Facturación SIAT",    price: "Bs. 175/mes",  description: "Facturas electrónicas oficiales según el SIN Bolivia",                              comingSoon: true },
+  QR_BOLIVIA:  { label: "Pagos QR Bolivia",    price: "Bs. 105/mes",  description: "Acepta pagos con QR bancario, Tigo Money y BiPago",                                 comingSoon: true },
+  ECOMMERCE:   { label: "E-commerce",          price: "Bs. 140/mes",  description: "Conecta tu tienda online y sincroniza inventario automáticamente",                   comingSoon: true },
+  CONTABILIDAD: { label: "Exportación Contable", price: "Bs. 126/mes", description: "Exporta ventas y gastos en CSV/Excel para tu contador",                           comingSoon: true },
 };
 
 const PLAN_ORDER: Record<PlanType, number> = { BASICO: 0, CRECER: 1, PRO: 2, EMPRESARIAL: 3 };
@@ -53,6 +53,10 @@ export const FEATURE_PLAN: Record<string, PlanType> = {
   facturacion_siat: "EMPRESARIAL",
   pagos_qr:         "PRO",
   staff:            "BASICO",
+  variants:         "CRECER",
+  purchase_orders:  "CRECER",
+  email_stats:      "PRO",
+  export_contable:  "EMPRESARIAL",
 };
 
 export function canUseFeature(plan: PlanType, feature: string): boolean {

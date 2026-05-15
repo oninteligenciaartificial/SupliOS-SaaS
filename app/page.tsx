@@ -1,5 +1,6 @@
 import Link from "next/link";
-import { Check, Store, Shirt, Pill, Monitor, Wrench, Dumbbell, ArrowRight, Zap, Shield, Clock, Users, TrendingUp, Mail } from "lucide-react";
+import { Store, Shirt, Pill, Monitor, Wrench, Dumbbell, ArrowRight, Zap, Shield, Clock, Users, TrendingUp, Mail } from "lucide-react";
+import { DashboardMockup } from "@/components/landing/DashboardMockup";
 import { createClient } from "@/lib/supabase/server";
 import { prisma } from "@/lib/prisma";
 import { redirect } from "next/navigation";
@@ -72,34 +73,48 @@ export default async function HomePage() {
       </nav>
 
       {/* Hero */}
-      <section className="max-w-5xl mx-auto px-6 py-24 text-center space-y-8">
-        <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-brand-kinetic-orange/10 border border-brand-kinetic-orange/20 text-brand-kinetic-orange text-xs font-medium">
-          7 dias gratis · Sin tarjeta de credito
-        </div>
+      <section className="relative overflow-hidden">
+        {/* Radial glow behind mockup */}
+        <div className="absolute right-0 top-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-[#FF6B00]/8 rounded-full blur-[120px] pointer-events-none" />
+        <div className="absolute right-24 top-1/2 -translate-y-1/2 w-[300px] h-[300px] bg-[#FF6B00]/12 rounded-full blur-[60px] pointer-events-none" />
 
-        <h1 className="text-4xl sm:text-6xl font-display font-bold tracking-tight leading-tight">
-          El sistema que se adapta
-          <br />
-          <span className="text-brand-kinetic-orange">a tu tipo de negocio</span>
-        </h1>
+        <div className="max-w-6xl mx-auto px-6 py-20 md:py-28 flex flex-col md:flex-row items-center gap-12 md:gap-8">
+          {/* Left: text */}
+          <div className="flex-1 space-y-8 text-center md:text-left">
+            <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-brand-kinetic-orange/10 border border-brand-kinetic-orange/20 text-brand-kinetic-orange text-xs font-medium">
+              7 dias gratis · Sin tarjeta de credito
+            </div>
 
-        <p className="text-brand-muted text-lg sm:text-xl max-w-2xl mx-auto leading-relaxed">
-          POS, inventario, pedidos, clientes y reportes. Con etiquetas, atributos y funciones especificas para ropa, farmacia, electronica, suplementos, ferreteria y mas.
-        </p>
+            <h1 className="text-4xl sm:text-5xl xl:text-6xl font-display font-bold tracking-tight leading-tight">
+              El sistema que se adapta
+              <br />
+              <span className="text-brand-kinetic-orange">a tu tipo de negocio</span>
+            </h1>
 
-        <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
-          <Link
-            href="/signup"
-            className="px-8 py-4 rounded-full bg-gradient-to-br from-brand-kinetic-orange to-brand-kinetic-orange-light text-black font-bold text-base shadow-[0_0_30px_rgba(255,107,0,0.4)] hover:shadow-[0_0_50px_rgba(255,107,0,0.6)] transition-all"
-          >
-            Empezar gratis
-          </Link>
-          <Link
-            href="/pricing"
-            className="px-8 py-4 rounded-full border border-white/10 text-white text-base hover:border-white/30 transition-colors flex items-center gap-2"
-          >
-            Ver planes <ArrowRight size={16} />
-          </Link>
+            <p className="text-brand-muted text-lg sm:text-xl max-w-lg leading-relaxed">
+              POS, inventario, pedidos, clientes y reportes. Con etiquetas, atributos y funciones especificas para ropa, farmacia, electronica, suplementos, ferreteria y mas.
+            </p>
+
+            <div className="flex flex-col sm:flex-row items-center md:items-start justify-center md:justify-start gap-4">
+              <Link
+                href="/signup"
+                className="px-8 py-4 rounded-full bg-gradient-to-br from-brand-kinetic-orange to-brand-kinetic-orange-light text-black font-bold text-base shadow-[0_0_30px_rgba(255,107,0,0.4)] hover:shadow-[0_0_50px_rgba(255,107,0,0.6)] transition-all"
+              >
+                Empezar gratis
+              </Link>
+              <Link
+                href="/pricing"
+                className="px-8 py-4 rounded-full border border-white/10 text-white text-base hover:border-white/30 transition-colors flex items-center gap-2"
+              >
+                Ver planes <ArrowRight size={16} />
+              </Link>
+            </div>
+          </div>
+
+          {/* Right: dashboard mockup */}
+          <div className="flex-1 flex justify-center md:justify-end">
+            <DashboardMockup />
+          </div>
         </div>
       </section>
 
@@ -211,8 +226,13 @@ export default async function HomePage() {
       </section>
 
       {/* Footer */}
-      <footer className="border-t border-white/5 py-8 text-center text-xs text-brand-muted">
-        GestiOS · Sistema de gestion para negocios en Bolivia y Latinoamerica
+      <footer className="border-t border-white/5 py-8 text-center text-xs text-brand-muted space-y-2">
+        <div>GestiOS · Sistema de gestion para negocios en Bolivia y Latinoamerica</div>
+        <div className="flex items-center justify-center gap-4">
+          <Link href="/privacidad" className="hover:text-white transition-colors">Política de Privacidad</Link>
+          <span className="text-white/20">·</span>
+          <Link href="/terminos" className="hover:text-white transition-colors">Términos y Condiciones</Link>
+        </div>
       </footer>
     </div>
   );
