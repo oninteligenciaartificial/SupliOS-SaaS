@@ -84,6 +84,17 @@ export function limitGateError(resource: string, limit: number, plan: PlanType):
   };
 }
 
+export function isInTrial(trialEndsAt: Date | null | undefined): boolean {
+  if (!trialEndsAt) return false;
+  return new Date() < trialEndsAt;
+}
+
+export function trialDaysLeft(trialEndsAt: Date | null | undefined): number {
+  if (!trialEndsAt) return 0;
+  const diff = trialEndsAt.getTime() - Date.now();
+  return Math.max(0, Math.ceil(diff / (1000 * 60 * 60 * 24)));
+}
+
 export const PLAN_FEATURES: Record<PlanType, string[]> = {
   BASICO: [
     "Dashboard",

@@ -4,6 +4,7 @@ import { redirect } from "next/navigation";
 import { cookies } from "next/headers";
 import { SidebarWrapper } from "./SidebarWrapper";
 import { ImpersonationBanner } from "./ImpersonationBanner";
+import { TrialBanner } from "@/components/dashboard/TrialBanner";
 import { canUseFeature, isPlanAtLeast, FEATURE_PLAN, type PlanType } from "@/lib/plans";
 import { getBusinessUI, type BusinessUIConfig } from "@/lib/business-ui";
 import type { BusinessType } from "@/lib/business-types";
@@ -154,6 +155,9 @@ export default async function DashboardLayout({
         lockedPlanMap={lockedPlanMap}
       />
       <main className="flex-1 w-full overflow-y-auto">
+        {!isSuperAdmin && !isImpersonating && (
+          <TrialBanner trialEndsAt={profile.organization?.trialEndsAt?.toISOString() ?? null} />
+        )}
         {isImpersonating && impersonateOrgName && (
           <ImpersonationBanner orgName={impersonateOrgName} />
         )}
