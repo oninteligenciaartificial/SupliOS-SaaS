@@ -82,8 +82,8 @@ describe("canUseAddon", () => {
 });
 
 describe("ADDON_META", () => {
-  it("WHATSAPP has price $40/mes", () => {
-    expect(ADDON_META.WHATSAPP.price).toBe("$40/mes");
+  it("WHATSAPP has price in BOB", () => {
+    expect(ADDON_META.WHATSAPP.price).toBe("Bs. 280/mes");
   });
 
   it("WHATSAPP is not comingSoon", () => {
