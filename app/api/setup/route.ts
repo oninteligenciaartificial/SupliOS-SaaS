@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { prisma } from "@/lib/prisma";
 import { checkRateLimit, RATE_LIMITS } from "@/lib/rate-limit";
+import { sendWelcomeEmail } from "@/lib/email";
 import { z } from "zod";
 
 const schema = z.object({
@@ -57,6 +58,12 @@ export async function POST(request: Request) {
       },
     }),
   ]);
+
+  sendWelcomeEmail({
+    to: user.email!,
+    customerName: userName.trim(),
+    orgName: organizationName.trim(),
+  }).catch(() => {});
 
   return NextResponse.json({ organizationId: org.id }, { status: 201 });
 }

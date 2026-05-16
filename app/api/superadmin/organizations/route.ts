@@ -19,7 +19,16 @@ export async function GET() {
   if (!admin) return NextResponse.json({ error: "No autorizado" }, { status: 403 });
 
   const orgs = await prisma.organization.findMany({
-    include: {
+    select: {
+      id: true,
+      name: true,
+      slug: true,
+      phone: true,
+      address: true,
+      plan: true,
+      planExpiresAt: true,
+      trialEndsAt: true,
+      createdAt: true,
       _count: { select: { profiles: true, products: true, orders: true } },
     },
     orderBy: { createdAt: "desc" },

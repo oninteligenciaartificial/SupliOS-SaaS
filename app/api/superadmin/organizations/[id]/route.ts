@@ -9,6 +9,8 @@ const schema = z.object({
   address: z.string().optional(),
   plan: z.enum(["BASICO", "CRECER", "PRO", "EMPRESARIAL"]).optional(),
   planExpiresAt: z.string().datetime().optional().nullable(),
+  action: z.literal("extend_trial").optional(),
+  days: z.number().int().min(1).max(30).optional(),
 });
 
 export async function PATCH(request: Request, { params }: { params: Promise<{ id: string }> }) {
@@ -19,7 +21,20 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
   try { body = await request.json(); } catch { return NextResponse.json({ error: "JSON invalido" }, { status: 400 }); }
   const result = schema.safeParse(body);
   if (!result.success) return NextResponse.json({ error: "Datos invalidos" }, { status: 400 });
-  const org = await prisma.organization.update({ where: { id }, data: result.data });
+
+  const { action, days, ...updateData } = result.data;
+
+  if (action === "extend_trial") {
+    const extensionDays = days ?? 7;
+    const current = await prisma.organization.findUnique({ where: { id }, select: { trialEndsAt: true } });
+    if (!current) return NextResponse.json({ error: "No encontrado" }, { status: 404 });
+    const base = current.trialEndsAt && current.trialEndsAt > new Date() ? current.trialEndsAt : new Date();
+    const newTrialEndsAt = new Date(base.getTime() + extensionDays * 24 * 60 * 60 * 1000);
+    const org = await prisma.organization.update({ where: { id }, data: { trialEndsAt: newTrialEndsAt } });
+    return NextResponse.json(org);
+  }
+
+  const org = await prisma.organization.update({ where: { id }, data: updateData });
   return NextResponse.json(org);
 }
 

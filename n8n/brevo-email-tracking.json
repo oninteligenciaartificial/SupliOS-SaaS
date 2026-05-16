@@ -59,7 +59,7 @@
     },
     {
       "parameters": {
-        "jsCode": "// Deduplicate events using messageId\nconst eventId = $json.body.messageId || $json.body.X-Mailin-custom;\nif (!eventId) return $json;\n\nconst processed = $getWorkflowStaticData(\"global\").processedIds || [];\nif (processed.includes(eventId)) {\n  return null; // Skip duplicate\n}\n\n// Add to processed list (keep last 5000)\nprocessed.push(eventId);\nif (processed.length > 5000) processed.splice(0, processed.length - 5000);\n$getWorkflowStaticData(\"global\").processedIds = processed;\n\nreturn $json;"
+        "jsCode": "// Deduplicate events using messageId\nconst eventId = $json.body.messageId || $json.body.X-Mailin-custom;\nif (!eventId) return $json;\n\nconst processed = $getWorkflowStaticData(\"global\").processedIds || [];\nif (processed.includes(eventId)) {\n  return []; // Skip duplicate\n}\n\n// Add to processed list (keep last 5000)\nprocessed.push(eventId);\nif (processed.length > 5000) processed.splice(0, processed.length - 5000);\n$getWorkflowStaticData(\"global\").processedIds = processed;\n\nreturn $json;"
       },
       "id": "dedup",
       "name": "Deduplicate Events",
@@ -76,7 +76,7 @@
           "parameters": [
             {
               "name": "Authorization",
-              "value": "Bearer {{ $env.BREVO_WEBHOOK_KEY }}"
+              "value": "={{ 'Bearer ' + $env.BREVO_WEBHOOK_KEY }}"
             },
             {
               "name": "Content-Type",

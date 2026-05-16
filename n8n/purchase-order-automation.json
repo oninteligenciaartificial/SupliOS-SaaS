@@ -27,7 +27,7 @@
           "parameters": [
             {
               "name": "Authorization",
-              "value": "Bearer {{ $env.GESTIOS_API_KEY }}"
+              "value": "={{ 'Bearer ' + $env.GESTIOS_API_KEY }}"
             }
           ]
         },
@@ -43,7 +43,7 @@
     },
     {
       "parameters": {
-        "jsCode": "// Check for POs that are past expected date\nconst now = new Date();\nconst overduePOs = [];\n\nfor (const item of $input.all()) {\n  const po = item.json;\n  if (po.expectedDate) {\n    const expected = new Date(po.expectedDate);\n    if (expected < now) {\n      overduePOs.push({\n        json: {\n          id: po.id,\n          supplier: po.supplier.name,\n          total: po.total,\n          expectedDate: po.expectedDate,\n          daysOverdue: Math.floor((now - expected) / (1000 * 60 * 60 * 24)),\n          organizationId: po.organizationId\n        }\n      });\n    }\n  }\n}\n\nreturn overduePOs;"
+        "jsCode": "// Check for POs that are past expected date\nconst now = new Date();\nconst overduePOs = [];\n\nfor (const item of $input.all()) {\n  const po = item.json;\n  if (po.expectedDate) {\n    const expected = new Date(po.expectedDate);\n    if (expected < now) {\n      overduePOs.push({\n        json: {\n          id: po.id,\n          supplier: po.supplierName ?? po.supplier?.name ?? 'Proveedor',\n          total: po.total,\n          expectedDate: po.expectedDate,\n          daysOverdue: Math.floor((now - expected) / (1000 * 60 * 60 * 24)),\n          organizationId: po.organizationId\n        }\n      });\n    }\n  }\n}\n\nif (overduePOs.length === 0) return [];\n\nreturn overduePOs;"
       },
       "id": "check-overdue",
       "name": "Check Overdue POs",
@@ -100,7 +100,7 @@
           "parameters": [
             {
               "name": "Authorization",
-              "value": "Bearer {{ $env.GESTIOS_API_KEY }}"
+              "value": "={{ 'Bearer ' + $env.GESTIOS_API_KEY }}"
             },
             {
               "name": "Content-Type",

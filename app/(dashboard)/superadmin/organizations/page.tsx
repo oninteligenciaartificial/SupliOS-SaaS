@@ -13,8 +13,32 @@ interface Org {
   address: string | null;
   plan: PlanType;
   planExpiresAt: string | null;
+  trialEndsAt: string | null;
   createdAt: string;
   _count: { profiles: number; products: number; orders: number };
+}
+
+function TrialBadge({ trialEndsAt, plan, planExpiresAt }: { trialEndsAt: string | null; plan: PlanType; planExpiresAt: string | null }) {
+  if (!trialEndsAt) return null;
+  const trialDate = new Date(trialEndsAt);
+  const now = new Date();
+  if (trialDate > now) {
+    const diff = Math.max(1, Math.ceil((trialDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24)));
+    return (
+      <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold text-yellow-300 bg-yellow-400/10 border border-yellow-400/20 ml-1.5">
+        Trial: {diff}d
+      </span>
+    );
+  }
+  // Expired trial — only show badge if no active paid plan
+  if (plan === "BASICO" && !planExpiresAt) {
+    return (
+      <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold text-red-300 bg-red-400/10 border border-red-400/20 ml-1.5">
+        Trial expirado
+      </span>
+    );
+  }
+  return null;
 }
 
 const PLANS: PlanType[] = ["BASICO", "CRECER", "PRO", "EMPRESARIAL"];
@@ -45,6 +69,7 @@ export default function OrganizationsPage() {
   const [editForm, setEditForm] = useState({ name: "", phone: "", address: "", plan: "BASICO" as PlanType, planExpiresAt: "" });
   const [editSaving, setEditSaving] = useState(false);
   const [editError, setEditError] = useState("");
+  const [extendingTrial, setExtendingTrial] = useState<string | null>(null);
 
   const [deleteId, setDeleteId] = useState<string | null>(null);
 
@@ -137,6 +162,17 @@ export default function OrganizationsPage() {
     fetchOrgs();
   }
 
+  async function extendTrial(orgId: string, days: number) {
+    setExtendingTrial(orgId);
+    await fetch(`/api/superadmin/organizations/${orgId}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ action: "extend_trial", days }),
+    });
+    setExtendingTrial(null);
+    fetchOrgs();
+  }
+
   return (
     <div className="p-4 sm:p-8 max-w-6xl mx-auto space-y-6 sm:space-y-8">
       <header className="flex flex-col sm:flex-row sm:justify-between sm:items-end gap-4 animate-pop">
@@ -182,13 +218,18 @@ export default function OrganizationsPage() {
                     <div className="font-bold text-white">{org.name}</div>
                     <div className="text-xs text-brand-muted font-mono">{org.slug}</div>
                   </td>
-                  <td className="p-5"><PlanBadge plan={org.plan} /></td>
+                  <td className="p-5">
+                    <div className="flex items-center flex-wrap gap-y-1">
+                      <PlanBadge plan={org.plan} />
+                      <TrialBadge trialEndsAt={org.trialEndsAt} plan={org.plan} planExpiresAt={org.planExpiresAt} />
+                    </div>
+                  </td>
                   <td className="p-5 text-white">{org._count.profiles}</td>
                   <td className="p-5 text-white">{org._count.products}</td>
                   <td className="p-5 text-white">{org._count.orders}</td>
                   <td className="p-5 text-brand-muted text-sm">{new Date(org.createdAt).toLocaleDateString("es-MX")}</td>
                   <td className="p-5">
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-2 flex-wrap">
                       <button
                         onClick={() => handleEnterOrg(org.id)}
                         disabled={entering === org.id}
@@ -196,6 +237,14 @@ export default function OrganizationsPage() {
                         className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-brand-kinetic-orange/10 text-brand-kinetic-orange hover:bg-brand-kinetic-orange/20 transition-colors text-xs font-medium disabled:opacity-50"
                       >
                         <LogIn size={13} /> {entering === org.id ? "Entrando..." : "Entrar"}
+                      </button>
+                      <button
+                        onClick={() => extendTrial(org.id, 7)}
+                        disabled={extendingTrial === org.id}
+                        title="Extender trial 7 dias"
+                        className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-yellow-400/10 text-yellow-300 hover:bg-yellow-400/20 transition-colors text-xs font-medium disabled:opacity-50"
+                      >
+                        {extendingTrial === org.id ? "..." : "+7d trial"}
                       </button>
                       <button onClick={() => openEdit(org)} className="p-2 rounded-lg hover:bg-white/10 text-brand-muted hover:text-white transition-colors">
                         <Pencil size={15} />
@@ -236,7 +285,10 @@ export default function OrganizationsPage() {
                 <div className="font-bold text-white">{org.name}</div>
                 <div className="text-xs text-brand-muted font-mono mt-0.5">{org.slug}</div>
               </div>
-              <PlanBadge plan={org.plan} />
+              <div className="flex flex-col items-end gap-1">
+                <PlanBadge plan={org.plan} />
+                <TrialBadge trialEndsAt={org.trialEndsAt} plan={org.plan} planExpiresAt={org.planExpiresAt} />
+              </div>
             </div>
             <div className="grid grid-cols-3 gap-2 text-center">
               {[["Usuarios", org._count.profiles], ["Productos", org._count.products], ["Pedidos", org._count.orders]].map(([label, val]) => (
@@ -246,13 +298,20 @@ export default function OrganizationsPage() {
                 </div>
               ))}
             </div>
-            <div className="flex items-center gap-2 pt-1">
+            <div className="flex items-center gap-2 pt-1 flex-wrap">
               <button
                 onClick={() => handleEnterOrg(org.id)}
                 disabled={entering === org.id}
                 className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg bg-brand-kinetic-orange/10 text-brand-kinetic-orange hover:bg-brand-kinetic-orange/20 transition-colors text-xs font-medium disabled:opacity-50"
               >
                 <LogIn size={13} /> {entering === org.id ? "Entrando..." : "Entrar"}
+              </button>
+              <button
+                onClick={() => extendTrial(org.id, 7)}
+                disabled={extendingTrial === org.id}
+                className="px-2.5 py-2 rounded-lg bg-yellow-400/10 text-yellow-300 hover:bg-yellow-400/20 transition-colors text-xs font-medium disabled:opacity-50"
+              >
+                {extendingTrial === org.id ? "..." : "+7d trial"}
               </button>
               <button onClick={() => openEdit(org)} className="p-2 rounded-lg hover:bg-white/10 text-brand-muted hover:text-white transition-colors">
                 <Pencil size={15} />
@@ -391,6 +450,26 @@ export default function OrganizationsPage() {
                   <button type="button" onClick={() => renewDays(365)} className="flex-1 py-1.5 rounded-lg border border-white/10 text-xs text-brand-muted hover:text-white hover:border-brand-kinetic-orange transition-colors">
                     +1 ano
                   </button>
+                </div>
+              </div>
+              <div className="border-t border-white/10 pt-4 space-y-2">
+                <label className="text-sm text-brand-muted">Extender trial</label>
+                <div className="flex gap-2">
+                  {[7, 14, 30].map((d) => (
+                    <button
+                      key={d}
+                      type="button"
+                      disabled={extendingTrial === editOrg?.id}
+                      onClick={async () => {
+                        if (!editOrg) return;
+                        await extendTrial(editOrg.id, d);
+                        setEditOrg(null);
+                      }}
+                      className="flex-1 py-1.5 rounded-lg border border-yellow-400/20 text-xs text-yellow-300 hover:bg-yellow-400/10 transition-colors disabled:opacity-50"
+                    >
+                      +{d}d
+                    </button>
+                  ))}
                 </div>
               </div>
               {editError && <p className="text-red-400 text-sm">{editError}</p>}
